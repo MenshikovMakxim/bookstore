@@ -63,6 +63,7 @@ return [
             'doesnt_have' => 'Books without a cover',
             'where_relation' => 'Books with at least one 5-star review',
             'with_count' => 'Review counts',
+            'with_count_having' => 'Books with at least 8 reviews (withCount + having)',
             'with_avg' => 'Top rated books',
             'with_sum' => 'Total stock per book',
             'with_exists' => 'Has cover?',

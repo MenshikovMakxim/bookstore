@@ -325,6 +325,16 @@ class Book extends Model
     }
 
     /**
+     * One row out of many: the lowest rating (ties broken by MIN(id)).
+     *
+     * @return HasOne<Review, $this>
+     */
+    public function lowestReview(): HasOne
+    {
+        return $this->hasOne(Review::class)->ofMany('rating', 'min');
+    }
+
+    /**
      * @return MorphOne<Image, $this>
      */
     public function cover(): MorphOne

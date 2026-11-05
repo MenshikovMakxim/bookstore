@@ -16,6 +16,7 @@ use App\Models\Author;
 use App\Models\Book;
 use App\Models\Review;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\View\Composers\GenreTreeComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -85,6 +86,8 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'book' => Book::class,
             'author' => Author::class,
+            // Building photos (images.imageable_type).
+            'warehouse' => Warehouse::class,
             // notifications.notifiable_type (database notification channel).
             'user' => User::class,
         ]);

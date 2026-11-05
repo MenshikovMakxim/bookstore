@@ -75,14 +75,26 @@ test('hasOne ofMany(rating, max) picks the best review, ties broken by highest i
         ->and($best->id)->toBe($reviews[3]->id);
 });
 
+test('hasOne ofMany(rating, min) picks the lowest review, ties broken by lowest id', function () {
+    $book = Book::factory()->create();
+    $ratings = [5, 2, 3, 2, 4];
+    $reviews = collect($ratings)->map(fn (int $rating) => Review::factory()->approved()->for($book)->create(['rating' => $rating]));
+
+    $lowest = Book::with('lowestReview')->find($book->id)->lowestReview;
+
+    expect($lowest->rating)->toBe(2)
+        ->and($lowest->id)->toBe($reviews[1]->id);
+});
+
 test('ofMany relations work when eager loading many books at once', function () {
     $books = Book::factory()->count(3)->withReviews(2)->create();
 
-    $loaded = Book::with(['latestReview', 'bestReview'])->whereIn('id', $books->pluck('id'))->get();
+    $loaded = Book::with(['latestReview', 'bestReview', 'lowestReview'])->whereIn('id', $books->pluck('id'))->get();
 
     foreach ($loaded as $book) {
         expect($book->latestReview->book_id)->toBe($book->id)
-            ->and($book->bestReview->book_id)->toBe($book->id);
+            ->and($book->bestReview->book_id)->toBe($book->id)
+            ->and($book->lowestReview->book_id)->toBe($book->id);
     }
 });
 
@@ -166,6 +178,30 @@ test('belongsToMany wherePivot: translators and translatedBooks', function () {
         ->and($author->translatedBooks()->count())->toBe(0);
 });
 
+test('coAuthors walks shared books and ignores translators', function () {
+    $main = Author::factory()->create();
+    $coAuthor = Author::factory()->create();
+    $translator = Author::factory()->create();
+    $stranger = Author::factory()->create();
+
+    $book = Book::factory()->create();
+    $book->authors()->attach($main, ['role' => AuthorRole::Author->value, 'sort_order' => 0]);
+    $book->authors()->attach($coAuthor, ['role' => AuthorRole::CoAuthor->value, 'sort_order' => 1]);
+    $book->authors()->attach($translator, ['role' => AuthorRole::Translator->value, 'sort_order' => 2]);
+
+    expect($main->coAuthors()->pluck('id')->all())->toBe([$coAuthor->id])
+        ->and($coAuthor->coAuthors()->pluck('id')->all())->toBe([$main->id])
+        ->and($translator->coAuthors()->count())->toBe(0)
+        ->and($stranger->coAuthors()->count())->toBe(0);
+
+    // The same co-author on another book must not produce duplicate rows.
+    $anotherBook = Book::factory()->create();
+    $anotherBook->authors()->attach($main, ['role' => AuthorRole::Author->value, 'sort_order' => 0]);
+    $anotherBook->authors()->attach($coAuthor, ['role' => AuthorRole::CoAuthor->value, 'sort_order' => 1]);
+
+    expect($main->coAuthors()->pluck('id')->all())->toBe([$coAuthor->id]);
+});
+
 test('belongsToMany using a custom Stock pivot with its own id and accessor', function () {
     $book = Book::factory()->inWarehouses(2)->create();
 
@@ -201,6 +237,18 @@ test('morphOne with where, morphMany and morphTo', function () {
         ->and($author->load('photo')->photo->is($photo))->toBeTrue()
         ->and(Image::with('imageable')->find($photo->id)->imageable)->toBeInstanceOf(Author::class)
         ->and(Image::with('imageable')->find($cover->id)->imageable->is($book))->toBeTrue();
+});
+
+test('warehouse is a polymorphic image owner', function () {
+    $warehouse = Warehouse::factory()->create();
+    $photo = $warehouse->images()->create(['path' => 'warehouses/a.jpg', 'type' => ImageType::Photo]);
+
+    $warehouse->load('photo');
+    $owner = Image::with('imageable')->find($photo->id)->imageable;
+
+    expect($warehouse->photo->is($photo))->toBeTrue()
+        ->and($owner)->toBeInstanceOf(Warehouse::class)
+        ->and($owner->is($warehouse))->toBeTrue();
 });
 
 test('morphToMany and morphedByMany: tags', function () {

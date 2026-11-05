@@ -26,7 +26,7 @@ class Image extends Model
     }
 
     /**
-     * The owner: a Book or an Author (resolved via the morph map).
+     * The owner: a Book, an Author or a Warehouse (resolved via the morph map).
      *
      * @return MorphTo<Model, $this>
      */

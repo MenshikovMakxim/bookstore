@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ImageType;
 use App\Enums\UserRole;
 use Database\Factories\WarehouseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 #[Fillable(['name', 'city', 'address'])]
 class Warehouse extends Model
@@ -69,5 +72,23 @@ class Warehouse extends Model
     public function movements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    /**
+     * Building photo (ImageType::Photo).
+     *
+     * @return MorphOne<Image, $this>
+     */
+    public function photo(): MorphOne
+    {
+        return $this->morphOne(Image::class, 'imageable')->where('type', ImageType::Photo);
+    }
+
+    /**
+     * @return MorphMany<Image, $this>
+     */
+    public function images(): MorphMany
+    {
+        return $this->morphMany(Image::class, 'imageable');
     }
 }

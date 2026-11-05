@@ -7,6 +7,7 @@ use App\Enums\ImageType;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\AuthorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -68,6 +69,25 @@ class Author extends Model
     public function translatedBooks(): BelongsToMany
     {
         return $this->books()->wherePivot('role', AuthorRole::Translator->value);
+    }
+
+    /**
+     * Other authors/co-authors credited on at least one of this author's books.
+     *
+     * There is no built-in self-referencing many-to-many "through a shared pivot"
+     * relation: walk Author -> books -> authors, exclude translators and the author.
+     *
+     * @return Builder<Author>
+     */
+    public function coAuthors(): Builder
+    {
+        return $this->newQuery()
+            ->whereKeyNot($this->getKey())
+            ->whereHas('books', fn (Builder $books) => $books
+                ->whereIn('author_book.role', [AuthorRole::Author->value, AuthorRole::CoAuthor->value])
+                ->whereHas('authors', fn (Builder $authors) => $authors
+                    ->whereKey($this->getKey())
+                    ->whereIn('author_book.role', [AuthorRole::Author->value, AuthorRole::CoAuthor->value])));
     }
 
     /**

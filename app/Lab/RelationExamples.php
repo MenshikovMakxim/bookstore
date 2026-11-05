@@ -268,6 +268,16 @@ final class RelationExamples
             return Book::withCount(['reviews', 'tags'])->orderBy('id')->limit(3)->get(['id', 'title']);
         });
 
+        $this->add($section, __('lab.relations.examples.with_count_having'), 'withCount + having', function (Samples $s) {
+            // Same result as has('reviews', '>=', 8), but the count is selected as a
+            // column and filtered in HAVING instead of a WHERE EXISTS subquery.
+            return Book::withCount('reviews')
+                ->having('reviews_count', '>=', 8)
+                ->orderBy('id')
+                ->limit(3)
+                ->get(['id', 'title']);
+        });
+
         $this->add($section, __('lab.relations.examples.with_avg'), 'withAvg', function (Samples $s) {
             return Book::withAvg('reviews', 'rating')->withCount('reviews')
                 ->having('reviews_count', '>=', 5)
