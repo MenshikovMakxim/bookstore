@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\AuthorRole;
 use App\Enums\StockMovementReason;
+use App\Events\ImportProgressed;
 use App\Http\Requests\Admin\StoreBookRequest;
 use App\Imports\BookCsv;
 use App\Models\Author;
@@ -110,6 +111,9 @@ class ImportBooksChunk implements ShouldQueue
 
             $this->recordProgress($errors);
         });
+
+        // After the commit: the page re-reads the counters it is told about.
+        ImportProgressed::dispatch($this->import->id);
     }
 
     /**

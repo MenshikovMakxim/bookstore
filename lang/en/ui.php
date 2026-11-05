@@ -15,6 +15,7 @@ return [
         'lab_models' => 'Lab: models',
         'lab_xss' => 'Lab: XSS',
         'lab_queues' => 'Lab: queues',
+        'lab_realtime' => 'Lab: realtime',
         'reports' => 'Reports',
         'admin' => 'Admin',
         'manage' => 'Warehouses',

@@ -10,6 +10,7 @@ use App\Http\Controllers\Lab\LabCollectionsController;
 use App\Http\Controllers\Lab\LabModelsController;
 use App\Http\Controllers\Lab\LabNPlusOneController;
 use App\Http\Controllers\Lab\LabQueuesController;
+use App\Http\Controllers\Lab\LabRealtimeController;
 use App\Http\Controllers\Lab\LabRelationsController;
 use App\Http\Controllers\Lab\LabXssController;
 use App\Http\Controllers\Manage;
@@ -176,6 +177,8 @@ Route::prefix('lab')->name('lab.')->middleware('lab')->group(function () {
     Route::get('/queues', [LabQueuesController::class, 'index'])->name('queues');
     Route::post('/queues/failed/{action}', [LabQueuesController::class, 'failed'])->name('queues.failed');
     Route::post('/queues/{variant}', [LabQueuesController::class, 'dispatch'])->name('queues.dispatch');
+    Route::get('/realtime', [LabRealtimeController::class, 'index'])->name('realtime');
+    Route::post('/realtime/{variant}', [LabRealtimeController::class, 'dispatch'])->name('realtime.dispatch');
 });
 
 // Any unmatched URL => our custom 404 page (instead of the framework's default).

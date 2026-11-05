@@ -6,7 +6,7 @@
 
     {{-- The page renders the current state; the script below refreshes it from the JSON
          endpoint every 2 s until the import is finished. --}}
-    <x-card id="import-progress" data-url="{{ route('admin.imports.progress', $import) }}" data-finished="{{ $progress['finished'] ? '1' : '0' }}">
+    <x-card id="import-progress" data-import-id="{{ $import->id }}" data-url="{{ route('admin.imports.progress', $import) }}" data-finished="{{ $progress['finished'] ? '1' : '0' }}">
         <div class="mb-2 flex items-baseline justify-between text-sm">
             <span class="font-semibold" data-field="status_label">{{ $progress['status_label'] }}</span>
             <span><span data-field="percentage">{{ $progress['percentage'] }}</span>%</span>
@@ -46,17 +46,25 @@
 
     @push('scripts')
         <script>
-            // Polling without a framework: fetch JSON, update the fields, stop when finished.
-            (() => {
+            // Polling (stage 9) + push (stage 10). The socket message (ImportProgressed on
+            // the private channel imports.{id}) is only a signal: on it the page fetches
+            // the same JSON it polls for. Polling stays as the fallback — every 2 s
+            // without a WebSocket connection, every 10 s with one (a missed message).
+            // DOMContentLoaded: Vite's module scripts (window.Echo) run before it.
+            document.addEventListener('DOMContentLoaded', () => {
                 const box = document.getElementById('import-progress');
                 if (box.dataset.finished === '1') return;
 
                 const set = (field, value) => box.querySelector(`[data-field="${field}"]`).textContent = value;
                 const errorsList = document.querySelector('[data-errors]');
+                const channel = `imports.${box.dataset.importId}`;
+                const live = () => window.Echo?.connector.pusher.connection.state === 'connected';
+                let finished = false;
 
-                const tick = async () => {
+                const tick = async (reschedule = true) => {
+                    if (finished) return;
                     const response = await fetch(box.dataset.url, {headers: {Accept: 'application/json'}});
-                    if (!response.ok) return setTimeout(tick, 5000);
+                    if (!response.ok) return reschedule && setTimeout(tick, 5000);
                     const data = await response.json();
 
                     ['status_label', 'percentage', 'total', 'processed', 'imported', 'failed'].forEach((f) => set(f, data[f]));
@@ -74,14 +82,17 @@
                     }
 
                     if (data.finished) {
+                        finished = true;
                         box.querySelector('[data-hint]').hidden = true;
-                    } else {
-                        setTimeout(tick, 2000);
+                        window.Echo?.leave(channel);
+                    } else if (reschedule) {
+                        setTimeout(tick, live() ? 10000 : 2000);
                     }
                 };
 
+                window.Echo?.private(channel).listen('.import.progressed', () => tick(false));
                 setTimeout(tick, 1000);
-            })();
+            });
         </script>
     @endpush
 </x-layouts.app>

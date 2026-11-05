@@ -6,6 +6,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- Read by Echo: private channels are authorized with POST /broadcasting/auth (CSRF-protected). --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ? $title.' — ' : '' }}{{ config('app.name') }}</title>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -51,12 +53,13 @@
                     <a href="{{ route('lab.models') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_models') }}</a>
                     <a href="{{ route('lab.xss') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_xss') }}</a>
                     <a href="{{ route('lab.queues') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_queues') }}</a>
+                    <a href="{{ route('lab.realtime') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_realtime') }}</a>
                 @endif
 
                 @role('manager', 'admin')
                     {{-- One COUNT query per page for staff. --}}
                     @php($unread = auth()->user()->unreadNotifications()->count())
-                    <a href="{{ route('notifications.index') }}" class="relative hover:text-amber-700" data-bell
+                    <a href="{{ route('notifications.index') }}" class="relative hover:text-amber-700" data-bell data-user-id="{{ auth()->id() }}"
                        title="{{ trans_choice('ui.notifications.unread', $unread, ['count' => $unread]) }}">
                         <span aria-hidden="true">🔔</span><span class="sr-only">{{ __('ui.notifications.title') }}</span>
                         @if ($unread > 0)

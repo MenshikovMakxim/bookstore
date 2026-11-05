@@ -41,7 +41,7 @@ test('pages render in Ukrainian without untranslated keys', function () {
         route('admin.dashboard'), route('admin.books.index'), route('admin.books.create'), route('admin.books.show', $book),
         route('admin.books.edit', $book), route('admin.reviews.index'),
         route('lab.relations'), route('lab.n-plus-one'), route('lab.n-plus-one', ['variant' => 'strict']),
-        route('lab.collections'), route('lab.models'), route('lab.xss'), route('lab.queues'), route('admin.imports.index'), route('notifications.index'), route('reports.stock'), route('reports.top-authors'), '/no-such-page',
+        route('lab.collections'), route('lab.models'), route('lab.xss'), route('lab.queues'), route('lab.realtime'), route('admin.imports.index'), route('notifications.index'), route('reports.stock'), route('reports.top-authors'), '/no-such-page',
     ];
 
     $unverified = User::factory()->unverified()->create();

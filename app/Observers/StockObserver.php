@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Enums\StockMovementReason;
+use App\Events\BookStockChanged;
 use App\Models\Stock;
 use App\Models\StockMovement;
 
@@ -11,16 +12,24 @@ use App\Models\StockMovement;
  * quantity changes through Eloquent (save, attach, sync, updateExistingPivot,
  * increment). Query-level updates (Stock::where()->update(), DB::table) skip
  * model events and therefore leave no movement — see docs/06-attributes-casts.md.
+ *
+ * Since stage 10 it also broadcasts BookStockChanged, so open book pages update
+ * their stock badge live (docs/10-broadcasting.md).
  */
 class StockObserver
 {
     public function created(Stock $stock): void
     {
+        $this->broadcast($stock);
         $this->record($stock, (int) ($stock->quantity ?? 0), $stock->movementReason ?? StockMovementReason::Receipt);
     }
 
     public function updated(Stock $stock): void
     {
+        if ($stock->wasChanged(['quantity', 'reserved'])) {
+            $this->broadcast($stock);
+        }
+
         if (! $stock->wasChanged('quantity')) {
             return;
         }
@@ -28,6 +37,14 @@ class StockObserver
         $delta = (int) $stock->quantity - (int) $stock->getOriginal('quantity');
 
         $this->record($stock, $delta, $stock->movementReason ?? StockMovementReason::Adjustment);
+    }
+
+    /**
+     * Before record(): it resets movementSource, which tells an import apart.
+     */
+    private function broadcast(Stock $stock): void
+    {
+        BookStockChanged::dispatch($stock->book_id, fromImport: isset($stock->movementSource['import_id']));
     }
 
     private function record(Stock $stock, int $delta, StockMovementReason $reason): void

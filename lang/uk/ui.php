@@ -15,6 +15,7 @@ return [
         'lab_models' => 'Лаб.: моделі',
         'lab_xss' => 'Лаб.: XSS',
         'lab_queues' => 'Лаб.: черги',
+        'lab_realtime' => 'Лаб.: реальний час',
         'reports' => 'Звіти',
         'admin' => 'Адміністрування',
         'manage' => 'Склади',
