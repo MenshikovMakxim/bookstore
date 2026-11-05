@@ -47,13 +47,37 @@
 
             <span class="ml-auto flex flex-wrap items-center gap-4 text-sm text-stone-500">
                 @if (App\Http\Middleware\LabAccess::allows(auth()->user()))
-                    <a href="{{ route('lab.relations') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_relations') }}</a>
-                    <a href="{{ route('lab.n-plus-one') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_n_plus_one') }}</a>
-                    <a href="{{ route('lab.collections') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_collections') }}</a>
-                    <a href="{{ route('lab.models') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_models') }}</a>
-                    <a href="{{ route('lab.xss') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_xss') }}</a>
-                    <a href="{{ route('lab.queues') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_queues') }}</a>
-                    <a href="{{ route('lab.realtime') }}" class="hover:text-amber-700">{{ __('ui.nav.lab_realtime') }}</a>
+                    @php
+                        $labs = [
+                            'lab.relations' => __('ui.nav.lab_relations'),
+                            'lab.n-plus-one' => __('ui.nav.lab_n_plus_one'),
+                            'lab.collections' => __('ui.nav.lab_collections'),
+                            'lab.models' => __('ui.nav.lab_models'),
+                            'lab.xss' => __('ui.nav.lab_xss'),
+                            'lab.queues' => __('ui.nav.lab_queues'),
+                            'lab.realtime' => __('ui.nav.lab_realtime'),
+                        ];
+                    @endphp
+                    {{-- Native <details> dropdown: opens without JS; resources/js/app.js closes it
+                         on an outside click and on Escape. --}}
+                    <details class="relative" data-dropdown>
+                        <summary @class([
+                            'flex cursor-pointer list-none items-center gap-1 hover:text-amber-700 [&::-webkit-details-marker]:hidden',
+                            'font-semibold text-amber-700' => request()->routeIs('lab.*'),
+                        ])>
+                            {{ __('ui.nav.labs') }} <span aria-hidden="true" class="text-xs">▾</span>
+                        </summary>
+                        <div class="absolute right-0 z-20 mt-2 w-56 rounded border border-stone-200 bg-white py-1 shadow-lg">
+                            @foreach ($labs as $routeName => $label)
+                                <a href="{{ route($routeName) }}"
+                                   @class([
+                                       'block px-4 py-1.5 text-stone-700 hover:bg-stone-100 hover:text-amber-700',
+                                       'font-semibold text-amber-700' => request()->routeIs($routeName.'*'),
+                                   ])
+                                   @if (request()->routeIs($routeName.'*')) aria-current="page" @endif>{{ $label }}</a>
+                            @endforeach
+                        </div>
+                    </details>
                 @endif
 
                 @role('manager', 'admin')
