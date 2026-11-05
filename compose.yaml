@@ -34,6 +34,9 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            # Without it Xdebug runs in "develop" mode here (the image default) and
+            # makes every job ~4x slower; laravel.test sets the same variable.
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
         volumes:
             - '.:/var/www/html'
         networks:
@@ -49,6 +52,9 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            # Without it Xdebug runs in "develop" mode here (the image default) and
+            # makes every job ~4x slower; laravel.test sets the same variable.
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
         volumes:
             - '.:/var/www/html'
         networks:
@@ -66,6 +72,9 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            # Without it Xdebug runs in "develop" mode here (the image default) and
+            # makes every job ~4x slower; laravel.test sets the same variable.
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
         volumes:
             - '.:/var/www/html'
         networks:

@@ -36,6 +36,25 @@ test('HasSlug: soft-deleted books still reserve their slug; an explicit slug is 
         ->and(Book::create([...$attributes, 'isbn' => '9786170000031', 'slug' => 'my-slug'])->slug)->toBe('my-slug');
 });
 
+test('HasSlug: one query however many suffixes are taken; gaps and look-alikes are handled', function () {
+    $genre = Genre::factory()->create();
+    $attributes = ['genre_id' => $genre->id, 'price' => 1000, 'format' => 'ebook', 'title' => 'Кобзар'];
+    foreach (['kobzar', 'kobzar-2', 'kobzar-3', 'kobzar-5', 'kobzar-taras'] as $i => $slug) {
+        Book::create([...$attributes, 'isbn' => '978617000'.(1000 + $i), 'slug' => $slug]);
+    }
+
+    $queries = [];
+    DB::listen(function ($query) use (&$queries) {
+        if (str_contains($query->sql, 'slug') && str_starts_with($query->sql, 'select')) {
+            $queries[] = $query->sql;
+        }
+    });
+
+    // The first free one: 4 (5 is taken, "kobzar-taras" is not a suffix).
+    expect(Book::create([...$attributes, 'isbn' => '9786170009999'])->slug)->toBe('kobzar-4')
+        ->and($queries)->toHaveCount(1);
+});
+
 test('HasSlug: the slug does not change when the title changes', function () {
     $book = Book::factory()->create(['slug' => null, 'title' => 'Кобзар']);
 

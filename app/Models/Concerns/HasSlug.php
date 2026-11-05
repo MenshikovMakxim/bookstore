@@ -36,25 +36,38 @@ trait HasSlug
 
     /**
      * "kobzar", then "kobzar-2", "kobzar-3", ... — the first one not taken.
+     *
+     * One query for all candidates: every slug equal to the base or starting with
+     * "base-", then the free suffix is picked in PHP. Slugs are ASCII [a-z0-9-],
+     * so the LIKE pattern needs no escaping, and the prefix match uses the index.
      */
     protected function uniqueSlug(string $base): string
     {
         $base = $base !== '' ? $base : Str::lower(class_basename($this));
+        $taken = $this->takenSlugs($base);
         $slug = $base;
 
-        for ($i = 2; $this->slugExists($slug); $i++) {
+        // Before: one EXISTS query per candidate — an N+1 for popular titles (the CSV
+        // import profile showed ~3 queries per new book):
+        // for ($i = 2; $this->slugExists($slug); $i++) { $slug = "{$base}-{$i}"; }
+        for ($i = 2; isset($taken[$slug]); $i++) {
             $slug = "{$base}-{$i}";
         }
 
         return $slug;
     }
 
-    protected function slugExists(string $slug): bool
+    /**
+     * @return array<string, int> slug => index, for isset() lookups
+     */
+    protected function takenSlugs(string $base): array
     {
         // The unique index also covers soft-deleted rows, so look at them too.
         return static::query()
             ->when(in_array(SoftDeletes::class, class_uses_recursive($this)), fn ($query) => $query->withTrashed())
-            ->where('slug', $slug)
-            ->exists();
+            ->where(fn ($query) => $query->where('slug', $base)->orWhere('slug', 'like', $base.'-%'))
+            ->pluck('slug')
+            ->flip()
+            ->all();
     }
 }

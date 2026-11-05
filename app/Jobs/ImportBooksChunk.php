@@ -85,10 +85,18 @@ class ImportBooksChunk implements ShouldQueue
             ->whereIn('isbn', array_map(StoreBookRequest::normalizeIsbn(...), array_column($rows, 'isbn')))
             ->get()
             ->keyBy('isbn');
+        // Same idea for authors (was Author::firstOrCreate per name) and for this
+        // warehouse's stock rows of the books we already have (was Stock::firstOrNew
+        // per row). New books have no stock row yet, so there is nothing to look up.
+        $authors = $this->prefetchAuthors($rows);
+        $stocks = Stock::where('warehouse_id', $this->import->warehouse_id)
+            ->whereIn('book_id', $books->pluck('id'))
+            ->get()
+            ->keyBy('book_id');
 
         $errors = [];
 
-        DB::transaction(function () use ($rows, $done, $genres, $books, &$errors) {
+        DB::transaction(function () use ($rows, $done, $genres, $books, $authors, $stocks, &$errors) {
             foreach ($rows as $line => $row) {
                 if ($done->has($line)) {
                     continue;
@@ -102,7 +110,7 @@ class ImportBooksChunk implements ShouldQueue
                     continue;
                 }
 
-                $error = $this->importRow($line, $validator->validated(), $genres, $books);
+                $error = $this->importRow($line, $validator->validated(), $genres, $books, $authors, $stocks);
 
                 if ($error !== null) {
                     $errors[$line] = [$error];
@@ -172,9 +180,11 @@ class ImportBooksChunk implements ShouldQueue
      * @param  array<string, mixed>  $data
      * @param  Collection<string, int>  $genres  slug => id
      * @param  Collection<string, Book>  $books  isbn => book (updated in place for later rows)
+     * @param  Collection<string, int>  $authors  authorKey() => id (updated in place)
+     * @param  Collection<int, Stock>  $stocks  book_id => stock in this warehouse (updated in place)
      * @return string|null a row error
      */
-    private function importRow(int $line, array $data, Collection $genres, Collection $books): ?string
+    private function importRow(int $line, array $data, Collection $genres, Collection $books, Collection $authors, Collection $stocks): ?string
     {
         $book = $books->get($data['isbn']) ?? new Book(['isbn' => $data['isbn']]);
 
@@ -182,6 +192,7 @@ class ImportBooksChunk implements ShouldQueue
             return __('ui.imports.errors.book_trashed', ['isbn' => $data['isbn']]);
         }
 
+        $isNew = ! $book->exists;
         $publishedAt = $data['published_at'] !== null ? Carbon::parse($data['published_at']) : null;
         $book->fill([
             'title' => $data['title'],
@@ -193,20 +204,42 @@ class ImportBooksChunk implements ShouldQueue
         ])->save(); // new book: slug from HasSlug
         $books->put($book->isbn, $book);
 
-        $authorIds = $this->authorIds($data['authors']);
-        $book->authors()->syncWithoutDetaching(
-            collect($authorIds)->mapWithKeys(fn (int $id, int $i) => [$id => ['role' => AuthorRole::Author->value, 'sort_order' => $i]])->all(),
-        );
+        $credits = collect($this->authorIds($data['authors'], $authors))
+            ->mapWithKeys(fn (int $id, int $i) => [$id => ['role' => AuthorRole::Author->value, 'sort_order' => $i]])
+            ->all();
+        // A new book has no credits yet: attach() is one multi-row INSERT. An existing
+        // one may have some: syncWithoutDetaching() reads them and adds only the missing.
+        $isNew ? $book->authors()->attach($credits) : $book->authors()->syncWithoutDetaching($credits);
 
-        $stock = Stock::firstOrNew(['warehouse_id' => $this->import->warehouse_id, 'book_id' => $book->id]);
-        $stock->quantity = (int) $stock->quantity + (int) $data['quantity'];
-        $stock->reserved ??= 0;
-        $stock->shelf_code ??= $data['shelf_code'];
+        $stock = $stocks->get($book->id);
         // Transient properties read by StockObserver: the movement it writes gets the
         // "import" reason and the (import_id, source_row) pair that makes re-runs safe.
-        $stock->movementReason = StockMovementReason::Import;
-        $stock->movementSource = ['import_id' => $this->import->id, 'source_row' => $line];
-        $stock->save();
+        $reason = StockMovementReason::Import;
+        $source = ['import_id' => $this->import->id, 'source_row' => $line];
+
+        if ($stock === null) {
+            $stock = new Stock([
+                'warehouse_id' => $this->import->warehouse_id,
+                'book_id' => $book->id,
+                'quantity' => (int) $data['quantity'],
+                'reserved' => 0,
+                'shelf_code' => $data['shelf_code'],
+            ]);
+            $stock->movementReason = $reason;
+            $stock->movementSource = $source;
+            $stock->save();
+            $stocks->put($book->id, $stock);
+        } else {
+            $stock->movementReason = $reason;
+            $stock->movementSource = $source;
+            // UPDATE ... SET quantity = quantity + ?: atomic, so two chunks running in
+            // parallel on different workers cannot overwrite each other's receipt (a
+            // prefetched or firstOrNew'd value may be stale). Fires the model events,
+            // so StockObserver still books the movement.
+            $stock->increment('quantity', (int) $data['quantity'], $stock->shelf_code === null && $data['shelf_code'] !== null
+                ? ['shelf_code' => $data['shelf_code']]
+                : []);
+        }
 
         return null;
     }
@@ -215,22 +248,63 @@ class ImportBooksChunk implements ShouldQueue
      * "Іван Франко; Леся Українка" => author ids, created when missing (last word =
      * last name). Exact-name matching: "І. Франко" would become a new author.
      *
+     * @param  Collection<string, int>  $authors  prefetched authorKey() => id, extended here
      * @return list<int>
      */
-    private function authorIds(string $names): array
+    private function authorIds(string $names, Collection $authors): array
+    {
+        return collect($this->parseAuthors($names))
+            // Not prefetched (a new author, or a name the DB collation matches but
+            // mb_strtolower() does not): firstOrCreate() lets the database decide, as before.
+            ->map(fn (array $name) => $authors[$this->authorKey(...$name)]
+                ??= Author::firstOrCreate(['first_name' => $name[0], 'last_name' => $name[1]])->id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{0: string, 1: string}> [first name, last name] pairs
+     */
+    private function parseAuthors(string $names): array
     {
         return collect(explode(';', $names))
             ->map(fn (string $name) => preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY))
             ->filter()
             ->map(function (array $parts) {
                 $last = array_pop($parts);
-                $first = implode(' ', $parts);
 
-                return Author::firstOrCreate(['first_name' => $first, 'last_name' => $last])->id;
+                return [implode(' ', $parts), $last];
             })
-            ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * One query for every author named in the chunk (by last name, matched in PHP).
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @return Collection<string, int> authorKey() => id
+     */
+    private function prefetchAuthors(array $rows): Collection
+    {
+        $lastNames = collect($rows)
+            ->flatMap(fn (array $row) => $this->parseAuthors($row['authors'] ?? ''))
+            ->pluck(1)
+            ->unique()
+            ->values();
+
+        return Author::whereIn('last_name', $lastNames)
+            ->get(['id', 'first_name', 'last_name'])
+            ->mapWithKeys(fn (Author $author) => [$this->authorKey($author->first_name, $author->last_name) => $author->id]);
+    }
+
+    /**
+     * Case-insensitive like the MySQL collation, so "франко" finds "Франко".
+     */
+    private function authorKey(string $first, string $last): string
+    {
+        return mb_strtolower($first.'|'.$last);
     }
 
     /**
