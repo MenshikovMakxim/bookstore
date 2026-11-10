@@ -6,7 +6,7 @@
 
 ## Стек
 
-Laravel 13 · PHP 8.3+ · MySQL 8.4 · Mailpit · Laravel Sail · Blade · Pest · Debugbar
+Laravel 13 · PHP 8.3+ · MySQL 8.4 · Mailpit · Laravel Reverb · Laravel Sail · Blade · Pest · Debugbar
 
 ## Запуск
 
@@ -45,12 +45,14 @@ docker compose exec -e SEED_SCALE=full laravel.test php artisan migrate:fresh --
 |---|---|
 | Застосунок | <http://localhost> |
 | Mailpit | <http://localhost:8025> |
+| Reverb (WebSocket) | `ws://localhost:8080`, кадри: `sail logs -f reverb` |
 | Лабораторія зв’язків | <http://localhost/lab/relations> |
 | Лабораторія N+1 | <http://localhost/lab/n-plus-one> |
 | Лабораторія колекцій | <http://localhost/lab/collections> |
 | Лабораторія моделей | <http://localhost/lab/models> |
 | Лабораторія XSS | <http://localhost/lab/xss> |
 | Лабораторія черг | <http://localhost/lab/queues> |
+| Лабораторія реального часу | <http://localhost/lab/realtime> |
 | Імпорт CSV (адмін) | <http://localhost/admin/imports> |
 | Склади (менеджер/адмін) | <http://localhost/manage/warehouses> |
 | Адмінка | <http://localhost/admin> |
@@ -103,6 +105,7 @@ docker compose exec -e SEED_SCALE=full laravel.test php artisan migrate:fresh --
 | 7 | Автентифікація без стартових наборів, підтвердження пошти, middleware (до/після/термінальне), гейти й політики, `Gate::before`, IDOR і scoped bindings, обмеження частоти, адмінка й керування залишками | [docs/07-middleware-auth.md](docs/07-middleware-auth.md) |
 | 8 | Form Request (життєвий цикл, `authorize()` через політики, `Rule::enum/exists/unique`, масиви, умовні правила, власне правило й замикання, `after()`, іменовані сумки помилок), компоненти форм, відгуки з модерацією, `/lab/xss` | [docs/08-forms-validation.md](docs/08-forms-validation.md) |
 | 9 | Черги (`database`), `Queue::route()`, задачі й повтори, унікальні задачі, події й слухачі, `afterCommit`, ланцюжки й пакети (імпорт CSV), middleware задач, сповіщення (mail + database), планувальник і `Prunable`, `/lab/queues` | [docs/09-queues.md](docs/09-queues.md) |
-| 10 | _буде згодом_ | |
+| 10 | Трансляція подій (broadcasting): Reverb, Echo, `ShouldBroadcast` / `ShouldBroadcastNow`, `toOthers()`, публічні й приватні канали, авторизація в `routes/channels.php`, broadcast-сповіщення, живий залишок і прогрес імпорту, `/lab/realtime` | [docs/10-broadcasting.md](docs/10-broadcasting.md) |
+| 11 | _буде згодом_ | |
 
 Нові уроки починайте з шаблону [docs/_template.md](docs/_template.md).

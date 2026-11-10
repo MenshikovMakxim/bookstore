@@ -29,11 +29,14 @@ services:
     # in memory until they restart; Docker restarts the container when it exits).
     queue:
         image: 'sail-8.5/app'
-        command: ['php', 'artisan', 'queue:work', '--queue=ratings,imports,notifications,default', '--tries=3', '--max-time=3600']
+        command: ['php', 'artisan', 'queue:work', '--queue=broadcasts,ratings,imports,notifications,default', '--tries=3', '--max-time=3600']
         restart: unless-stopped
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            # Without it Xdebug runs in "develop" mode here (the image default) and
+            # makes every job ~4x slower; laravel.test sets the same variable.
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
         volumes:
             - '.:/var/www/html'
         networks:
@@ -49,12 +52,33 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            # Without it Xdebug runs in "develop" mode here (the image default) and
+            # makes every job ~4x slower; laravel.test sets the same variable.
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
         volumes:
             - '.:/var/www/html'
         networks:
             - sail
         depends_on:
             - mysql
+    # WebSocket server (stage 10): browsers connect to it, the app and workers push
+    # events to it over HTTP. --debug prints every frame in `sail logs -f reverb`.
+    reverb:
+        image: 'sail-8.5/app'
+        command: ['php', 'artisan', 'reverb:start', '--host=0.0.0.0', '--port=8080', '--debug']
+        restart: unless-stopped
+        ports:
+            - '${FORWARD_REVERB_PORT:-8080}:8080'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            # Without it Xdebug runs in "develop" mode here (the image default) and
+            # makes every job ~4x slower; laravel.test sets the same variable.
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
     mysql:
         image: 'mysql:8.4'
         ports:

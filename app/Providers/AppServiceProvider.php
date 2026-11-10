@@ -10,6 +10,10 @@ use App\Jobs\ImportBooksChunk;
 use App\Jobs\RecalculateBookRating;
 use App\Jobs\RecalculateBookRatings;
 use App\Jobs\SendImportReport;
+use App\Lab\Realtime\LabSignal;
+use App\Lab\Realtime\TraceDelayedListener;
+use App\Lab\Realtime\TraceQueuedListener;
+use App\Lab\Realtime\TraceSyncListener;
 use App\Listeners\DispatchRatingRecalculation;
 use App\Listeners\NotifyModeratorsOfPendingReview;
 use App\Models\Author;
@@ -19,12 +23,14 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\View\Composers\GenreTreeComposer;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\LazyLoadingViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -102,6 +108,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureAuthorization();
         $this->configureRateLimiting();
         $this->configureQueues();
+        $this->configureLab();
 
         // @role('manager', 'admin') ... @endrole in Blade.
         Blade::if('role', fn (string ...$roles) => in_array(auth()->user()?->role?->value, $roles, true));
@@ -153,12 +160,17 @@ class AppServiceProvider extends ServiceProvider
      * A parent class or interface works as a key: Notification::class covers every
      * queued notification.
      *
-     * Worker: queue:work --queue=ratings,imports,notifications,default — polls the
-     * queues in that order (priority), see compose.yaml.
+     * Worker: queue:work --queue=broadcasts,ratings,imports,notifications,default — polls
+     * the queues in that order (priority), see compose.yaml.
+     *
+     * ShouldBroadcast::class covers every queued broadcast (BookStockChanged, the
+     * lab's LabBroadcast, BroadcastNotificationCreated of the broadcast notification
+     * channel). ShouldBroadcastNow events are not queued at all.
      */
     private function configureQueues(): void
     {
         Queue::route([
+            ShouldBroadcast::class => QueueName::Broadcasts,
             RecalculateBookRating::class => QueueName::Ratings,
             RecalculateBookRatings::class => QueueName::Ratings,
             DispatchRatingRecalculation::class => QueueName::Ratings,
@@ -168,5 +180,16 @@ class AppServiceProvider extends ServiceProvider
             Notification::class => QueueName::Notifications,
             CheckLowStock::class => QueueName::Default,
         ]);
+    }
+
+    /**
+     * Event discovery only scans app/Listeners, so the lab's listeners are registered
+     * explicitly. Order matters: TraceSyncListener can stop propagation (return false).
+     */
+    private function configureLab(): void
+    {
+        Event::listen(LabSignal::class, TraceSyncListener::class);
+        Event::listen(LabSignal::class, TraceQueuedListener::class);
+        Event::listen(LabSignal::class, TraceDelayedListener::class);
     }
 }

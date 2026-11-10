@@ -90,6 +90,14 @@
 | rate limiting | обмеження частоти (rate limiting) |
 | IDOR | IDOR (підміна ідентифікатора в URL) |
 | queue / job | черга / задача (job) |
+| event / listener | подія / слухач (listener) |
+| worker | обробник (worker) |
+| broadcasting | трансляція подій (broadcasting) |
+| broadcaster | транслятор (broadcaster) |
+| channel (public / private / presence) | канал (публічний / приватний / присутності) |
+| WebSocket | WebSocket (без перекладу) |
+| socket id | socket id — ідентифікатор з’єднання |
+| polling | опитування (polling) |
 | foreign key | зовнішній ключ |
 | index | індекс |
 | subquery | підзапит |

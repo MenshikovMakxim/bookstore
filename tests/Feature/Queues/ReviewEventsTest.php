@@ -84,7 +84,7 @@ test('shouldQueue(): removing a pending review does not touch the rating', funct
     Queue::assertPushed(CallQueuedListener::class, 1);
 });
 
-test('moderators get a database + mail notification about a pending review', function () {
+test('moderators get a mail + database + broadcast notification about a pending review', function () {
     Notification::fake();
     $admins = User::factory()->admin()->count(2)->create();
     $manager = User::factory()->manager()->create();
@@ -93,7 +93,7 @@ test('moderators get a database + mail notification about a pending review', fun
     postReview($this->book); // sync queue in tests: the queued listener runs right away
 
     Notification::assertSentTo($admins, PendingReviewNotification::class,
-        fn (PendingReviewNotification $n, array $channels) => $channels === ['mail', 'database'] && $n->bookTitle === $this->book->title);
+        fn (PendingReviewNotification $n, array $channels) => $channels === ['mail', 'database', 'broadcast'] && $n->bookTitle === $this->book->title);
     Notification::assertNotSentTo($manager, PendingReviewNotification::class);
 });
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ImportStatus;
+use App\Events\ImportProgressed;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -72,6 +73,8 @@ class Import extends Model
             'errors' => [...($this->errors ?? []), 'file' => [$reason]],
             'finished_at' => now(),
         ]);
+
+        ImportProgressed::dispatch($this->id);
     }
 
     /**
@@ -91,6 +94,8 @@ class Import extends Model
             'status' => $import->failed > 0 ? ImportStatus::CompletedWithErrors : ImportStatus::Completed,
             'finished_at' => now(),
         ]);
+
+        ImportProgressed::dispatch($import->id);
     }
 
     /**

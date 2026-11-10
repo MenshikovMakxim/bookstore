@@ -42,7 +42,9 @@ class PendingReviewNotification extends Notification implements ShouldQueue
      */
     public function via(User $notifiable): array
     {
-        return ['mail', 'database'];
+        // broadcast (stage 10): pushed to the private App.Models.User.{id} channel;
+        // the bell in the header bumps its counter without a page reload.
+        return ['mail', 'database', 'broadcast'];
     }
 
     public function toMail(User $notifiable): MailMessage
@@ -59,6 +61,10 @@ class PendingReviewNotification extends Notification implements ShouldQueue
     }
 
     /**
+     * Payload of both the database row and the broadcast message (no toDatabase()
+     * or toBroadcast() here, so Laravel uses toArray() for each). Echo receives it
+     * as {id, type, ...this array}.
+     *
      * @return array<string, mixed>
      */
     public function toArray(User $notifiable): array

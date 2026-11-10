@@ -7,6 +7,7 @@ use App\Jobs\CheckLowStock;
 use App\Jobs\ImportBooksChunk;
 use App\Jobs\SendImportReport;
 use App\Jobs\ValidateImportFile;
+use App\Models\Author;
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Import;
@@ -17,6 +18,7 @@ use App\Notifications\ImportFinishedNotification;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -115,6 +117,28 @@ test('chunk re-run is idempotent: no duplicate books, movements or errors', func
         ->and(StockMovement::where('import_id', $import->id)->count())->toBe(2)
         ->and($import->fresh()->only(['imported', 'failed']))->toBe(['imported' => 2, 'failed' => 4])
         ->and((int) $this->warehouse->stocks()->sum('quantity'))->toBe(5);
+});
+
+test('chunk: a constant number of queries per row (lookups are prefetched per chunk)', function () {
+    $import = fixtureImport('import-valid.csv');
+    // An author that already exists (written in another case) and a stock row to add to.
+    $franko = Author::factory()->create(['first_name' => 'іван', 'last_name' => 'франко']);
+    $kobzar = Book::factory()->create(['isbn' => '9789660340008']);
+    $kobzar->warehouses()->attach($this->warehouse, ['quantity' => 5, 'reserved' => 0, 'shelf_code' => null]);
+
+    $count = 0;
+    DB::listen(function () use (&$count) {
+        $count++;
+    });
+    ImportBooksChunk::dispatchSync($import, 0, 500);
+
+    // 3 rows: per new book ~1 slug check + book + credits + stock + movement INSERT,
+    // plus ~10 per chunk (prefetch, transaction, progress). Before: ~10 per row.
+    expect($count)->toBeLessThanOrEqual(3 * 6 + 12)
+        ->and(Author::where('last_name', 'франко')->pluck('id')->all())->toBe([$franko->id])
+        ->and($kobzar->stocks()->where('warehouse_id', $this->warehouse->id)->sole()->only(['quantity', 'shelf_code']))
+        ->toBe(['quantity' => 12, 'shelf_code' => 'B-02-1'])
+        ->and(StockMovement::where('import_id', $import->id)->where('book_id', $kobzar->id)->value('delta'))->toBe(7);
 });
 
 test('a second import upserts by ISBN and adds stock', function () {
