@@ -8,6 +8,7 @@ use App\Http\Requests\CatalogFilterRequest;
 use App\Models\Author;
 use App\Models\Book;
 use App\Models\Genre;
+use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -29,6 +30,7 @@ class BookController extends Controller
         $genre = isset($filters['genre']) ? Genre::firstWhere('slug', $filters['genre']) : null;
         $author = isset($filters['author']) ? Author::firstWhere('slug', $filters['author']) : null;
         $format = isset($filters['format']) ? BookFormat::from($filters['format']) : null;
+        $tag = isset($filters['tag']) ? Tag::firstWhere('slug', $filters['tag']) : null;
         $inStock = filter_var($filters['in_stock'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $sort = $filters['sort'] ?? 'newest';
 
@@ -39,6 +41,7 @@ class BookController extends Controller
             ->when($genre, fn ($query, Genre $genre) => $query->ofGenre($genre))
             ->when($author, fn ($query, Author $author) => $query->byAuthor($author))
             ->when($format, fn ($query, BookFormat $format) => $query->where('format', $format))
+            ->when($tag, fn ($query, Tag $tag) => $query->tagged($tag))
             ->when($inStock, fn ($query) => $query->inStock())
             ->sorted($sort)
             ->orderBy('id')
@@ -52,6 +55,7 @@ class BookController extends Controller
                 'author' => $author?->full_name,
                 'format' => $format?->label(),
                 'in_stock' => $inStock ? __('ui.catalog.chip_in_stock') : null,
+                'tag' => $tag ? '#'.$tag->name : null,
             ]),
             'activeGenre' => $genre,
             'sort' => $sort,

@@ -66,6 +66,9 @@ return [
         'clear_all' => 'Clear all',
         'chip_in_stock' => 'In stock',
     ],
+    'tags' => [
+        'title' => 'Books tagged #:tag',
+    ],
     'card' => [
         'unknown_author' => 'Unknown author',
         'no_cover' => 'No cover',

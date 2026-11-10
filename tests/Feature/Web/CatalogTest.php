@@ -5,6 +5,7 @@ use App\Models\Author;
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Review;
+use App\Models\Tag;
 use App\Models\Warehouse;
 
 /**
@@ -42,6 +43,29 @@ test('author filter', function () {
     Book::factory()->create(['title' => 'Not By Jane']);
 
     expect(catalogTitles('/books?author=jane-doe'))->toBe(['By Jane']);
+});
+
+test('tag filter shows only books with that tag', function () {
+    $tag = Tag::factory()->create(['name' => 'Classics', 'slug' => 'classics']);
+    $tagged = Book::factory()->create(['title' => 'Tagged']);
+    $tagged->tags()->attach($tag);
+    Book::factory()->create(['title' => 'Untagged']);
+
+    expect(catalogTitles('/books?tag=classics'))->toBe(['Tagged']);
+
+    $this->get('/books?tag=classics')
+        ->assertOk()
+        ->assertSee('data-filter="tag"', false)
+        ->assertSee('#Classics');
+});
+
+test('tag page lists only books with that tag', function () {
+    $tag = Tag::factory()->create(['name' => 'Classics', 'slug' => 'classics']);
+    $tagged = Book::factory()->create(['title' => 'Tagged']);
+    $tagged->tags()->attach($tag);
+    Book::factory()->create(['title' => 'Untagged']);
+
+    expect(catalogTitles('/tags/classics'))->toBe(['Tagged']);
 });
 
 test('in_stock filter requires quantity above reserved in some warehouse', function () {
@@ -108,7 +132,7 @@ test('CatalogFilterRequest: invalid filters are dropped, valid ones still apply,
     Book::factory()->format(BookFormat::Hardcover)->create(['title' => 'Printed']);
 
     // format is valid, the rest is garbage: only the format filter applies.
-    expect(catalogTitles('/books?format=ebook&genre=nope&author=nobody&in_stock=maybe&sort=bogus'))->toBe(['Digital'])
+    expect(catalogTitles('/books?format=ebook&genre=nope&author=nobody&tag=nope&in_stock=maybe&sort=bogus'))->toBe(['Digital'])
         ->and(catalogTitles('/books?format[]=ebook&sort[]=x'))->toHaveCount(2);
 
     $this->get('/books?genre=nope')->assertOk()->assertSessionHasNoErrors();

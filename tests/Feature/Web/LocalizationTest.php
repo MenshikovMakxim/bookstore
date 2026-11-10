@@ -6,6 +6,7 @@ use App\Enums\ImageType;
 use App\Enums\StockMovementReason;
 use App\Enums\UserRole;
 use App\Models\Book;
+use App\Models\Tag;
 use App\Models\User;
 use App\Models\Warehouse;
 use Database\Seeders\DatabaseSeeder;
@@ -27,13 +28,14 @@ test('pages render in Ukrainian without untranslated keys', function () {
 
     $book = Book::has('authors')->orderBy('id')->first();
     $author = $book->authors()->first();
+    $tag = Tag::has('books')->orderBy('id')->first();
 
     $guestUrls = [route('home'), route('login'), route('register'), route('books.show', $book), '/no-such-page'];
 
     $warehouse = Warehouse::has('stocks')->orderBy('id')->first();
     $adminUrls = [
         route('home'), route('books.index'), route('books.index', ['in_stock' => 1, 'format' => 'ebook', 'sort' => 'rating']),
-        route('books.show', $book), route('authors.index'), route('authors.show', $author),
+        route('books.show', $book), route('tags.show', $tag), route('authors.index'), route('authors.show', $author),
         route('authors.books.show', [$author, $book]), route('genres.index'), route('about'),
         route('manage.warehouses.index'), route('manage.warehouses.stocks.index', $warehouse),
         route('manage.warehouses.stocks.edit', [$warehouse, $warehouse->stocks()->first()]),

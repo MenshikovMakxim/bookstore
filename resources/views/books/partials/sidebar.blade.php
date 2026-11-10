@@ -6,6 +6,10 @@
             <input type="hidden" name="{{ $key }}" value="{{ request($key) }}">
         @endif
     @endforeach
+    {{-- On /tags/{slug} the tag is in the path, not the query string. --}}
+    @if (request()->filled('tag') || isset($activeTag))
+        <input type="hidden" name="tag" value="{{ request('tag', ($activeTag ?? null)?->slug) }}">
+    @endif
 
     <div>
         <label for="sort" class="mb-1 block font-semibold">{{ __('ui.catalog.sort') }}</label>

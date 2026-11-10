@@ -13,7 +13,12 @@ class GenreController extends Controller
         return view('genres.index', [
             'genres' => Genre::whereNull('parent_id')
                 ->withCount('books')
-                ->with(['children' => fn ($query) => $query->withCount('books')->orderBy('name')])
+                ->with([
+                    // A limit inside eager loading applies per parent (ROW_NUMBER()).
+                    'books' => fn ($query) => $query->orderBy('title')->limit(3),
+                    'children' => fn ($query) => $query->withCount('books')->orderBy('name'),
+                    'children.books' => fn ($query) => $query->orderBy('title')->limit(3),
+                ])
                 ->orderBy('name')
                 ->get(),
         ]);

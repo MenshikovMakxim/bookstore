@@ -39,8 +39,8 @@ test('all lazy (a) runs more queries than the fully eager variant (d) on the sam
 
     expect($bad->error)->toBeNull()
         ->and($eager->error)->toBeNull()
-        ->and($eager->queries)->toBe(4)
-        ->and($bad->queries)->toBe(1 + 4 * count($lab->bookIds()))
+        ->and($eager->queries)->toBe(5)
+        ->and($bad->queries)->toBe(1 + 5 * count($lab->bookIds()))
         ->and($bad->duplicates())->not->toBeEmpty()
         ->and($eager->duplicates())->toBeEmpty();
 });

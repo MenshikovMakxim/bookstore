@@ -190,6 +190,19 @@ class Book extends Model
     }
 
     /**
+     * Has the tag (any taggable type — here books only).
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function tagged(Builder $query, Tag|string $tag): void
+    {
+        $query->whereHas('tags', fn (Builder $tags) => $tag instanceof Tag
+            ? $tags->whereKey($tag->getKey())
+            : $tags->where('slug', $tag));
+    }
+
+    /**
      * Title contains $term; a term of digits (dashes/spaces allowed) also matches
      * an ISBN prefix ("978-617" finds 978617...).
      *

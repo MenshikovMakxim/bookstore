@@ -50,7 +50,7 @@
                         <a href="{{ route('genres.show', $genre) }}" class="rounded-full border border-stone-300 px-3 py-0.5 hover:bg-stone-100">{{ $genre->name }}</a>
                     @endforeach
                     @foreach ($book->tags as $tag)
-                        <span class="rounded-full bg-stone-200 px-3 py-0.5 text-stone-600">#{{ $tag->name }}</span>
+                        <a href="{{ route('tags.show', $tag) }}" class="rounded-full bg-stone-200 px-3 py-0.5 text-stone-600 hover:bg-stone-300">#{{ $tag->name }}</a>
                     @endforeach
                 </section>
             @endif

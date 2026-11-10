@@ -57,6 +57,17 @@ test('catalog with filters and rating sort', function () {
     );
 });
 
+test('tag page (tags.show)', function () {
+    expectConstantQueries(
+        function (int $n) {
+            seedCatalogBooks($n);
+
+            return Tag::has('books')->firstOrFail();
+        },
+        fn (Tag $tag) => $this->get(route('tags.show', $tag)),
+    );
+});
+
 test('book page (books.show) with many authors, reviews, tags, genres and warehouses', function () {
     expectConstantQueries(
         function (int $n) {
@@ -171,6 +182,33 @@ test('genre tree view composer (catalog sidebar) and genres.index', function () 
 
     expectConstantQueries($seed, fn () => $this->get(route('books.index')));
     expectConstantQueries($seed, fn () => $this->get(route('genres.index')));
+});
+
+test('genres page with the first three books of every genre', function () {
+    expectConstantQueries(
+        fn (int $n) => Genre::factory()->count($n)->create()->each(function (Genre $root) {
+            Book::factory()->count(4)->for($root)->create();
+            Genre::factory()->count(2)->child($root)->create()
+                ->each(fn (Genre $child) => Book::factory()->count(4)->for($child)->create());
+        }),
+        fn () => $this->get(route('genres.index')),
+    );
+});
+
+test('admin: book page (admin.books.show)', function () {
+    asAdmin();
+
+    expectConstantQueries(
+        function (int $n) {
+            $book = Book::factory()->withAuthors($n)->create();
+            User::factory()->count($n)->create()
+                ->each(fn (User $user) => Review::factory()->approved()->for($book)->for($user)->create());
+            Review::factory()->count($n)->for($book)->create(); // pending: counted without ApprovedScope
+
+            return $book;
+        },
+        fn (Book $book) => $this->get(route('admin.books.show', $book)),
+    );
 });
 
 test('index pages (authors, warehouses)', function () {

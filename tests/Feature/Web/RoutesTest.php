@@ -4,6 +4,7 @@ use App\Models\Author;
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Import;
+use App\Models\Tag;
 use App\Models\Warehouse;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,7 @@ beforeEach(function () {
     $this->book = Book::factory()->for($this->genre)->withAuthors(2)->inWarehouses(2)->withReviews(2)->create();
     $this->author = $this->book->authors()->first();
     $this->warehouse = Warehouse::first();
+    $this->tag = Tag::factory()->create();
 });
 
 /**
@@ -47,6 +49,7 @@ test('every named GET route resolves and returns 200 for an admin', function () 
         'authors.show' => [$this->author],
         'authors.books.show' => [$this->author, $this->book],
         'genres.show' => [$this->genre],
+        'tags.show' => [$this->tag],
         'admin.books.show' => [$this->book],
         'admin.imports.show' => [$import],
         'admin.imports.progress' => [$import],
@@ -68,7 +71,7 @@ test('every named GET route resolves and returns 200 for an admin', function () 
     }
 
     expect($tested)->toContain('home', 'books.index', 'books.show', 'authors.index', 'authors.show',
-        'authors.books.show', 'genres.index', 'genres.show', 'about', 'admin.dashboard', 'admin.books.index',
+        'authors.books.show', 'genres.index', 'genres.show', 'tags.show', 'about', 'admin.dashboard', 'admin.books.index',
         'admin.books.create', 'admin.books.edit', 'admin.reviews.index', 'manage.warehouses.index',
         'manage.warehouses.stocks.edit', 'reports.stock', 'lab.relations', 'lab.xss', 'books.reviews.create', 'lab.queues', 'admin.imports.index', 'admin.imports.show', 'notifications.index');
 });
@@ -90,12 +93,32 @@ test('genres.show redirects to the filtered catalog', function () {
         ->assertRedirect(route('books.index', ['genre' => $this->genre->slug]));
 });
 
+test('genres.index previews the first three books of a genre', function () {
+    $genre = Genre::factory()->create(['name' => 'Поезія']);
+
+    foreach (['Книга А', 'Книга Б', 'Книга В', 'Книга Г'] as $title) {
+        Book::factory()->for($genre)->create(['title' => $title]);
+    }
+
+    $this->get(route('genres.index'))
+        ->assertOk()
+        ->assertSeeInOrder(['Книга А', 'Книга Б', 'Книга В'])
+        ->assertDontSee('Книга Г');
+});
+
+test('tags.show renders the catalog filtered by tag', function () {
+    $this->get(route('tags.show', $this->tag))
+        ->assertOk()
+        ->assertSee(__('ui.tags.title', ['tag' => $this->tag->name]));
+});
+
 test('unknown slugs return 404', function (string $url) {
     $this->get($url)->assertNotFound();
 })->with([
     'book' => '/books/no-such-book',
     'author' => '/authors/no-such-author',
     'genre' => '/genres/no-such-genre',
+    'tag' => '/tags/no-such-tag',
 ]);
 
 test('scoped binding: a book that is not by the author is a 404', function () {

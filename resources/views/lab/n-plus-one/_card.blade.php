@@ -22,6 +22,10 @@
                     : $book->authors->pluck('full_name')->join(', ') }}
             </p>
             <p class="text-xs text-stone-400">{{ $book->genre?->name ?? __('lab.n_plus_one.card.no_genre') }} · {{ trans_choice('ui.counts.reviews', $reviewCount) }}</p>
+            <p class="truncate text-xs text-amber-700">
+                {{ __('lab.n_plus_one.card.tags') }}:
+                {{ $book->tags->pluck('name')->join(', ') ?: __('lab.n_plus_one.card.no_tags') }}
+            </p>
         </div>
     </div>
 

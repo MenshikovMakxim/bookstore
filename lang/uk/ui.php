@@ -66,6 +66,9 @@ return [
         'clear_all' => 'Скинути все',
         'chip_in_stock' => 'В наявності',
     ],
+    'tags' => [
+        'title' => 'Книги з тегом #:tag',
+    ],
     'card' => [
         'unknown_author' => 'Автор невідомий',
         'no_cover' => 'Без обкладинки',

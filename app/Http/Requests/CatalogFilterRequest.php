@@ -44,6 +44,7 @@ class CatalogFilterRequest extends FormRequest
                 ->whereExists(fn (Builder $credits) => $credits->from('author_book')->whereColumn('author_book.author_id', 'authors.id')))],
             'format' => ['sometimes', Rule::enum(BookFormat::class)],
             'in_stock' => ['sometimes', 'boolean'],
+            'tag' => ['sometimes', 'string', Rule::exists('tags', 'slug')],
             'sort' => ['sometimes', Rule::in(BookController::SORTS)],
         ];
     }
@@ -62,7 +63,7 @@ class CatalogFilterRequest extends FormRequest
      * valid() = the input without the failed attributes; Arr::only() keeps the keys
      * that have rules (never the whole query string).
      *
-     * @return array{genre?: string, author?: string, format?: string, in_stock?: string, sort?: string}
+     * @return array{genre?: string, author?: string, format?: string, in_stock?: string, tag?: string, sort?: string}
      */
     public function filters(): array
     {

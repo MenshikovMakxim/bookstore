@@ -21,7 +21,7 @@ trait ShowsBook
             'genre.parent',
             'genres:id,name,slug',
             'authors:id,first_name,last_name,slug',
-            'tags:id,name',
+            'tags:id,name,slug',
             'cover',
             'latestReview.user:id,name',
             'bestReview.user:id,name',

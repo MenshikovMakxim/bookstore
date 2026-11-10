@@ -168,7 +168,7 @@ final class NPlusOneLab
             __('lab.n_plus_one.variants.with-full_d'),
             function (array $ids) {
                 $books = Book::whereIn('id', $ids)
-                    ->with(['authors', 'genre', 'cover'])
+                    ->with(['authors', 'genre', 'cover', 'tags:id,name,slug'])
                     ->withCount('reviews')
                     ->get();
 
@@ -179,7 +179,7 @@ final class NPlusOneLab
             __('lab.n_plus_one.variants.count-in-php_d'),
             function (array $ids) {
                 $books = Book::whereIn('id', $ids)
-                    ->with(['authors', 'genre', 'cover', 'reviews'])
+                    ->with(['authors', 'genre', 'cover', 'tags:id,name,slug', 'reviews'])
                     ->get();
 
                 // _card falls back to $book->reviews->count() when there is no *_count attribute.
@@ -198,7 +198,7 @@ final class NPlusOneLab
             __('lab.n_plus_one.variants.feed-nested_d'),
             function (array $ids) {
                 $books = Book::whereIn('id', $ids)
-                    ->with(['authors', 'genre', 'cover', 'reviews.user.profile'])
+                    ->with(['authors', 'genre', 'cover', 'tags:id,name,slug', 'reviews.user.profile'])
                     ->withCount('reviews')
                     ->get();
 
@@ -210,7 +210,7 @@ final class NPlusOneLab
             function (array $ids) {
                 $books = Book::whereIn('id', $ids)
                     ->with([
-                        'authors', 'genre', 'cover',
+                        'authors', 'genre', 'cover', 'tags:id,name,slug',
                         'reviews' => fn ($query) => $query->latest('id')->limit(3),
                         'reviews.user.profile',
                     ])
@@ -225,7 +225,7 @@ final class NPlusOneLab
             function (array $ids) {
                 $books = Book::whereIn('id', $ids)->get();
 
-                $books->load(['authors', 'genre', 'cover'])->loadCount('reviews');
+                $books->load(['authors', 'genre', 'cover', 'tags:id,name,slug'])->loadCount('reviews');
                 $books->loadMissing(['authors', 'genre']); // already loaded: no queries
 
                 return $this->render($books);
@@ -272,6 +272,7 @@ final class NPlusOneLab
                         'authors:id,first_name,last_name',
                         'genre:id,name',
                         'cover:id,imageable_type,imageable_id,path',
+                        'tags:id,name,slug',
                     ])
                     ->withCount('reviews')
                     ->get();
@@ -288,6 +289,7 @@ final class NPlusOneLab
                         'authors:id,first_name,last_name',
                         'genre:id,name',
                         'cover:id,imageable_type,imageable_id,path',
+                        'tags:id,name,slug',
                     ])
                     ->withCount('reviews')
                     ->get();
@@ -310,7 +312,7 @@ final class NPlusOneLab
             __('lab.n_plus_one.variants.accessor-eager_d'),
             function (array $ids) {
                 $books = LabBook::whereIn('id', $ids)
-                    ->with(['authors', 'genre', 'cover'])
+                    ->with(['authors', 'genre', 'cover', 'tags:id,name,slug'])
                     ->withCount('reviews')
                     ->get();
 
@@ -332,7 +334,7 @@ final class NPlusOneLab
             __('lab.n_plus_one.variants.inverse-chaperone_d'),
             function (array $ids) {
                 $books = LabBook::whereIn('id', $ids)
-                    ->with(['authors', 'genre', 'cover', 'labReviewsChaperoned.user.profile'])
+                    ->with(['authors', 'genre', 'cover', 'tags:id,name,slug', 'labReviewsChaperoned.user.profile'])
                     ->withCount('reviews')
                     ->get();
 

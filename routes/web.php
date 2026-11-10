@@ -16,6 +16,7 @@ use App\Http\Controllers\Manage;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\TagController;
 use App\Models\Review;
 use App\Models\Scopes\ApprovedScope;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,8 @@ Route::controller(AuthorController::class)->prefix('authors')->name('authors.')-
 // Plain [Controller::class, 'method'] routes; genres.show only redirects.
 Route::get('/genres', [GenreController::class, 'index'])->name('genres.index');
 Route::get('/genres/{genre:slug}', [GenreController::class, 'show'])->name('genres.show');
+// Tag page reuses the catalog view, pre-filtered by the tag.
+Route::get('/tags/{tag:slug}', [TagController::class, 'show'])->name('tags.show');
 
 // View route (no controller); the page uses the legacy @extends layout for comparison.
 Route::view('/about', 'about')->name('about');

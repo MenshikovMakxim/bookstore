@@ -1,4 +1,4 @@
-<x-layouts.app :title="__('ui.catalog.title')">
+<x-layouts.app :title="$pageTitle ?? __('ui.catalog.title')">
     <div class="grid gap-8 md:grid-cols-[14rem_1fr]">
         <aside>
             {{-- @include shares the parent's variables; extra ones can be passed explicitly. --}}
