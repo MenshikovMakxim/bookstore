@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Warehouse;
 use App\Reports\StockByWarehouseGenreReport;
 use App\Reports\TopAuthorsReport;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -13,23 +15,26 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ReportController extends Controller
 {
-    public function __invoke(string $report): View|StreamedResponse
+    // Route parameters are injected positionally: {warehouse?} first, then the
+    // ->defaults('report') value.
+    public function __invoke(?Warehouse $warehouse, string $report): View|StreamedResponse
     {
         return match ($report) {
-            'stock' => $this->stock(),
-            'stock-csv' => $this->stockCsv(),
+            'stock' => $this->stock($warehouse),
+            'stock-csv' => $this->stockCsv($warehouse),
             'top-authors' => $this->topAuthors(),
         };
     }
 
-    private function stock(): View
+    private function stock(?Warehouse $warehouse): View
     {
-        $report = new StockByWarehouseGenreReport;
+        $report = new StockByWarehouseGenreReport($warehouse?->id);
         $rows = $report->rows();
 
         return view('reports.stock', [
             'warehouses' => $rows->groupBy('warehouse'),
             'totals' => $report->totals($rows),
+            'warehouse' => $warehouse,
         ]);
     }
 
@@ -47,13 +52,13 @@ class ReportController extends Controller
      * Streams the CSV while reading stock rows in chunks (lazyById):
      * memory stays flat no matter how many rows there are.
      */
-    private function stockCsv(): StreamedResponse
+    private function stockCsv(?Warehouse $warehouse): StreamedResponse
     {
-        return response()->streamDownload(function () {
+        return response()->streamDownload(function () use ($warehouse) {
             $out = fopen('php://output', 'w');
             fputcsv($out, ['warehouse', 'shelf', 'isbn', 'title', 'quantity', 'reserved', 'price_cents', 'value_cents'], escape: '');
 
-            foreach ((new StockByWarehouseGenreReport)->lines() as $line) {
+            foreach ((new StockByWarehouseGenreReport($warehouse?->id))->lines() as $line) {
                 fputcsv($out, [
                     $line->warehouse,
                     $line->shelf_code,
@@ -67,7 +72,14 @@ class ReportController extends Controller
             }
 
             fclose($out);
-        }, 'stock-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, $this->csvFilename($warehouse), ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function csvFilename(?Warehouse $warehouse): string
+    {
+        $suffix = $warehouse ? '-'.Str::slug($warehouse->name, '-', 'uk') : '';
+
+        return 'stock'.$suffix.'-'.now()->format('Y-m-d').'.csv';
     }
 
     /**

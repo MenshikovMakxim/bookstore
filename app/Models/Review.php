@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\ApprovedScope;
+use App\ValueObjects\Rating;
 use Database\Factories\ReviewFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
@@ -30,6 +31,7 @@ class Review extends Model
     protected function casts(): array
     {
         return [
+            'rating' => Rating::class,
             'is_approved' => 'boolean',
         ];
     }

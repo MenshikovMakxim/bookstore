@@ -80,6 +80,7 @@ SQL-звіти (`StockByWarehouseGenreReport`, CSV) рахують `sum(quantity
 | `array` (було до етапу 6) | — | `array` | `$book->meta['x'] = 1` → «Indirect modification of overloaded property» |
 | `encrypted` | `profiles.phone` | `string` | у базі — base64-шифротекст |
 | `hashed` | `users.password` | хеш | з коробки |
+| `Rating::class` (власний) | `reviews.rating` | `Rating` | `Castable` → `RatingCast`; `stars()` → `★★★★☆` |
 | `boolean` | `reviews.is_approved` | `bool` | |
 
 Чому `immutable_datetime`: зі змінним `Carbon` код `$date = $book->published_at; $date->addYear();`
@@ -104,7 +105,7 @@ SQL-звіти (`StockByWarehouseGenreReport`, CSV) рахують `sum(quantity
 ### Серіалізація
 
 - `#[Appends(['isbn_formatted'])]` додає обчислений атрибут у `toArray()`/`toJson()`.
-- `Money` → `{cents, formatted}`; enum → значення; дати → ISO-8601.
+- `Money` → `{cents, formatted}`; `Rating` → `{value, stars}`; enum → значення; дати → ISO-8601.
 - `User`: `#[Hidden(['password', 'remember_token', 'email'])]` — облікові дані й контакти не потрапляють
   у JSON. Разово: `$user->makeVisible('email')`, `makeHidden([...])` (також на колекції).
 
@@ -122,7 +123,7 @@ public function scopeCheaperThan(Builder $query, int $cents) { … }  // ста�
 `sorted($key)` (невідомий ключ → `newest`), `withCardData()` (усе для `<x-book-card>`).
 `ofGenre('slug')` будує ідентифікатори жанрів підзапитом — без окремого запиту.
 
-Каталог (`BookController::index`) тепер: `Book::withCardData()->when($genre, fn ($q, $g) => $q->ofGenre($g))…->sorted($sort)`.
+Каталог (`BookController::index`) тепер: `Book::withCardData()->when($genre, fn ($q, $g) => $q->ofGenre($g))…->when($search !== '', fn ($q) => $q->search($search))->sorted($sort)`. Параметр `?q=` шукає за назвою або ISBN; порожній рядок ігнорується, а валідований `q` показується знімним чипом.
 Тест `catalog: scopes return exactly what the stage 3 when() chain returned` зберігає старий
 ланцюжок і порівнює ідентифікатори для набору фільтрів на засіяних даних — поведінка не змінилася.
 
@@ -157,7 +158,7 @@ public function scopeCheaperThan(Builder $query, int $cents) { … }  // ста�
 редірект зі старої.)
 
 **`StockObserver`**: `created` → рух `receipt` на всю кількість; `updated` зі зміненим `quantity`
-→ рух з `delta = нове − старе` (`getOriginal()`). Причину задає тимчасова властивість
+→ рух з `delta = нове − старе` (`getOriginal()`); `deleted` → рух `adjustment` на `−quantity`. Причину задає тимчасова властивість
 `$stock->movementReason` (звичайна PHP-властивість, не стовпець; за замовчуванням `receipt`/`adjustment`),
 спостерігач її скидає після запису. `user_id` — `auth()->id()` або `null`. Нульова дельта
 руху не створює.
@@ -172,7 +173,7 @@ public function scopeCheaperThan(Builder $query, int $cents) { … }  // ста�
 | `$book->warehouses()->attach($w, ['quantity' => 5])` | `created` | +5 `receipt` |
 | `->updateExistingPivot($id, ['quantity' => 8])` | `updated` | +3 `adjustment` |
 | `->sync([...])` | `updated` для наявних зі зміною, `created` для нових, `deleted` для прибраних | так |
-| `->detach($w)` | `deleted` | — (спостерігач не обробляє) |
+| `->detach($w)` | `deleted` | `−quantity` `adjustment` |
 | `->updateExistingPivot()` без змін | — (нічого не dirty, `save()` не викликається) | — |
 | `$stock->save()`, `$stock->update()`, `$stock->increment()` | `updated` | так |
 | `Stock::whereKey(…)->update()`, `$stocks->toQuery()->update()` | **немає** | **немає** |

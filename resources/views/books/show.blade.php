@@ -73,7 +73,7 @@
                     <x-card>
                         <x-slot:header>{{ $heading }}</x-slot:header>
                         @if ($review)
-                            <x-rating-stars :rating="$review->rating" />
+                            <x-rating-stars :rating="$review->rating->value" />
                             <p class="mt-2 text-sm">{{ Str::limit($review->body, 160) }}</p>
                             <x-slot:footer>{{ $review->user?->name ?? __('ui.book.deleted_user') }} · {{ $review->created_at->diffForHumans() }}</x-slot:footer>
                         @else
@@ -92,7 +92,8 @@
                         <x-card>
                             <div class="flex items-center justify-between">
                                 <span class="font-medium">{{ $review->user->name }}</span>
-                                <x-rating-stars :rating="$review->rating" />
+                                {{-- Custom cast: Rating::stars() renders the value object directly. --}}
+                                <span class="tracking-tight text-amber-500" title="{{ __('ui.rating.title', ['rating' => $review->rating->value, 'max' => 5]) }}">{{ $review->rating->stars() }}</span>
                             </div>
                             {{-- Escape first, then add <br>: e() turns every < > " ' & of the user's text into
                                  entities, so the only tags in the output are the <br>s nl2br() adds. The other

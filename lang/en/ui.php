@@ -67,6 +67,10 @@ return [
         'reset' => 'Reset filters',
         'clear_all' => 'Clear all',
         'chip_in_stock' => 'In stock',
+        'search' => 'Search',
+        'search_placeholder' => 'Title or ISBN',
+        'search_chip' => 'Search: :term',
+        'search_submit' => 'Find',
     ],
     'tags' => [
         'title' => 'Books tagged #:tag',

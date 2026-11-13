@@ -185,6 +185,7 @@ return [
     'isbn13_checksum' => 'The :attribute field contains an ISBN with a wrong check digit.',
     'no_links' => 'The :attribute field must not contain links.',
     'reserved_exceeds_quantity' => 'Reserved cannot exceed the quantity.',
+    'receipt_on_decrease' => 'A receipt cannot be selected when the quantity decreases.',
 
     'custom' => [
         'shelf_code' => [

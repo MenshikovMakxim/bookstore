@@ -67,6 +67,10 @@ return [
         'reset' => 'Скинути фільтри',
         'clear_all' => 'Скинути все',
         'chip_in_stock' => 'В наявності',
+        'search' => 'Пошук',
+        'search_placeholder' => 'Назва або ISBN',
+        'search_chip' => 'Пошук: :term',
+        'search_submit' => 'Знайти',
     ],
     'tags' => [
         'title' => 'Книги з тегом #:tag',

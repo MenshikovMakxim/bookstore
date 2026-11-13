@@ -45,6 +45,7 @@ class CatalogFilterRequest extends FormRequest
             'format' => ['sometimes', Rule::enum(BookFormat::class)],
             'in_stock' => ['sometimes', 'boolean'],
             'tag' => ['sometimes', 'string', Rule::exists('tags', 'slug')],
+            'q' => ['sometimes', 'string', 'max:100'],
             'sort' => ['sometimes', Rule::in(BookController::SORTS)],
         ];
     }
@@ -63,7 +64,7 @@ class CatalogFilterRequest extends FormRequest
      * valid() = the input without the failed attributes; Arr::only() keeps the keys
      * that have rules (never the whole query string).
      *
-     * @return array{genre?: string, author?: string, format?: string, in_stock?: string, tag?: string, sort?: string}
+     * @return array{genre?: string, author?: string, format?: string, in_stock?: string, tag?: string, q?: string, sort?: string}
      */
     public function filters(): array
     {

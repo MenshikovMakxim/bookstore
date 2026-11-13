@@ -111,7 +111,21 @@ test('pivot operations on the Stock pivot (->using(Stock::class)) fire model eve
         ['delta' => 3, 'reason' => 'adjustment'],
         ['delta' => -2, 'reason' => 'adjustment'],
         ['delta' => 2, 'reason' => 'receipt'],
-        // detach: "deleted" fires, but the observer does not record removals.
+        // detach: the deleted observer writes the removed quantity back out.
+        ['delta' => -2, 'reason' => 'adjustment'],
+    ]);
+});
+
+test('deleting a stock row writes a negative adjustment', function () {
+    $book = Book::factory()->create();
+    $warehouse = Warehouse::factory()->create();
+    $book->warehouses()->attach($warehouse, ['quantity' => 4]);
+
+    $book->stocks()->first()->delete();
+
+    expect(movementsOf($book))->toBe([
+        ['delta' => 4, 'reason' => 'receipt'],
+        ['delta' => -4, 'reason' => 'adjustment'],
     ]);
 });
 

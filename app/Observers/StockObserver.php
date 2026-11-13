@@ -8,9 +8,9 @@ use App\Models\Stock;
 use App\Models\StockMovement;
 
 /**
- * Writes the stock_movements ledger whenever a Stock row is created or its
- * quantity changes through Eloquent (save, attach, sync, updateExistingPivot,
- * increment). Query-level updates (Stock::where()->update(), DB::table) skip
+ * Writes the stock_movements ledger whenever a Stock row is created, its
+ * quantity changes, or it is deleted through Eloquent (save, attach, sync,
+ * updateExistingPivot, increment, detach). Query-level updates (Stock::where()->update(), DB::table) skip
  * model events and therefore leave no movement — see docs/06-attributes-casts.md.
  *
  * Since stage 10 it also broadcasts BookStockChanged, so open book pages update
@@ -37,6 +37,16 @@ class StockObserver
         $delta = (int) $stock->quantity - (int) $stock->getOriginal('quantity');
 
         $this->record($stock, $delta, $stock->movementReason ?? StockMovementReason::Adjustment);
+    }
+
+    /**
+     * Removing a stock row (detach, sync, delete) takes its copies out of the ledger:
+     * a negative adjustment keeps the running total explainable.
+     */
+    public function deleted(Stock $stock): void
+    {
+        $this->broadcast($stock);
+        $this->record($stock, -(int) $stock->quantity, $stock->movementReason ?? StockMovementReason::Adjustment);
     }
 
     /**

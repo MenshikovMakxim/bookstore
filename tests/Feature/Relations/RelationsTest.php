@@ -71,7 +71,7 @@ test('hasOne ofMany(rating, max) picks the best review, ties broken by highest i
 
     $best = Book::with('bestReview')->find($book->id)->bestReview;
 
-    expect($best->rating)->toBe(5)
+    expect($best->rating->value)->toBe(5)
         ->and($best->id)->toBe($reviews[3]->id);
 });
 
@@ -82,7 +82,7 @@ test('hasOne ofMany(rating, min) picks the lowest review, ties broken by lowest 
 
     $lowest = Book::with('lowestReview')->find($book->id)->lowestReview;
 
-    expect($lowest->rating)->toBe(2)
+    expect($lowest->rating->value)->toBe(2)
         ->and($lowest->id)->toBe($reviews[1]->id);
 });
 

@@ -12,6 +12,15 @@
     @endif
 
     <div>
+        <label for="q" class="mb-1 block font-semibold">{{ __('ui.catalog.search') }}</label>
+        <div class="flex gap-1">
+            <input id="q" name="q" value="{{ request('q') }}" placeholder="{{ __('ui.catalog.search_placeholder') }}"
+                   class="min-w-0 flex-1 rounded border border-stone-300 bg-white px-2 py-1">
+            <button type="submit" class="rounded bg-amber-600 px-3 py-1 text-white">{{ __('ui.catalog.search_submit') }}</button>
+        </div>
+    </div>
+
+    <div>
         <label for="sort" class="mb-1 block font-semibold">{{ __('ui.catalog.sort') }}</label>
         <select id="sort" name="sort" class="w-full rounded border border-stone-300 bg-white px-2 py-1" data-autosubmit>
             @foreach ($sorts as $value)

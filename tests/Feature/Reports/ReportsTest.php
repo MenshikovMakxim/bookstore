@@ -87,7 +87,7 @@ test('top authors report equals collection-based statistics', function () {
         ->unique(fn ($credit) => $credit->author_id.'-'.$credit->book_id)
         ->groupBy('author_id')
         ->map(fn ($credits) => $credits->flatMap(fn ($credit) => $reviewsByBook[$credit->book_id] ?? collect()))
-        ->map(fn ($reviews) => ['count' => $reviews->count(), 'avg' => round($reviews->avg('rating'), 2)])
+        ->map(fn ($reviews) => ['count' => $reviews->count(), 'avg' => round($reviews->avg('rating.value'), 2)])
         ->filter(fn ($stat) => $stat['count'] >= 10);
 
     $rows = (new TopAuthorsReport)->rows();
@@ -131,12 +131,64 @@ test('stock CSV streams a header and one line per stock row of non-deleted books
         ->and(count($lines) - 1)->toBe(Stock::whereNot('book_id', $deleted->id)->count());
 });
 
+test('stock report filters by a warehouse bound to the route', function () {
+    $first = Warehouse::factory()->create(['name' => 'Склад А']);
+    $second = Warehouse::factory()->create(['name' => 'Склад Б']);
+    $bookA = Book::factory()->create(['price' => 1000]);
+    $bookB = Book::factory()->create(['price' => 2000]);
+
+    $first->books()->attach($bookA, ['quantity' => 2, 'reserved' => 1]);
+    $first->books()->attach($bookB, ['quantity' => 3, 'reserved' => 0]);
+    $second->books()->attach($bookA, ['quantity' => 7, 'reserved' => 2]);
+
+    $this->get(route('reports.stock', ['warehouse' => $first]))
+        ->assertOk()
+        ->assertSee('Склад А')
+        ->assertDontSee('Склад Б')
+        ->assertSee(route('reports.stock', $first->id), false)
+        ->assertSee(route('reports.stock-csv', $first->id), false);
+
+    $this->get(route('reports.stock', ['warehouse' => $second->id]))
+        ->assertOk()
+        ->assertSee('Склад Б')
+        ->assertDontSee('Склад А');
+});
+
+test('unknown warehouse is a 404 and CSV honours the filter', function () {
+    seedSmall();
+    $warehouse = Warehouse::factory()->create();
+    $book = Book::factory()->create();
+    $warehouse->books()->attach($book, ['quantity' => 4]);
+
+    $this->get(route('reports.stock', ['warehouse' => $warehouse->id + 1000]))->assertNotFound();
+    $this->get(route('reports.stock-csv', ['warehouse' => $warehouse->id + 1000]))->assertNotFound();
+
+    $response = $this->get(route('reports.stock-csv', ['warehouse' => $warehouse]))->assertOk();
+    $lines = array_values(array_filter(explode("\n", $response->streamedContent())));
+
+    expect(count($lines) - 1)->toBe(Stock::where('warehouse_id', $warehouse->id)->count())
+        ->and($lines[1])->toContain((string) $book->isbn)
+        ->and($response->headers->get('content-disposition'))->toContain('stock-sklad');
+});
+
 test('CSV neutralizes formula-like titles', function () {
     $book = Book::factory()->inWarehouses(1)->create(['title' => '=HYPERLINK("http://evil")']);
 
     $content = $this->get(route('reports.stock-csv'))->streamedContent();
 
     expect($content)->toContain("'=HYPERLINK")->not->toContain(',"=HYPERLINK');
+});
+
+test('only admins can export the stock CSV; managers still see the HTML report', function () {
+    asManager();
+
+    $this->get(route('reports.stock'))->assertOk()->assertDontSee(route('reports.stock-csv'), false);
+    $this->get(route('reports.stock-csv'))->assertForbidden();
+
+    asAdmin();
+
+    $this->get(route('reports.stock'))->assertOk()->assertSee(route('reports.stock-csv'), false);
+    $this->get(route('reports.stock-csv'))->assertOk();
 });
 
 test('report pages render', function (string $route) {

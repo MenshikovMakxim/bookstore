@@ -68,6 +68,20 @@ test('tag page lists only books with that tag', function () {
     expect(catalogTitles('/tags/classics'))->toBe(['Tagged']);
 });
 
+test('q searches titles and ISBN prefixes, blank search is ignored', function () {
+    Book::factory()->create(['title' => 'Кобзар', 'isbn' => '9786177489124']);
+    Book::factory()->create(['title' => 'Інша книга']);
+
+    expect(catalogTitles('/books?q=Кобзар'))->toBe(['Кобзар'])
+        ->and(catalogTitles('/books?q=978-617'))->toBe(['Кобзар'])
+        ->and(catalogTitles('/books?q=%20%20'))->toHaveCount(2);
+
+    $this->get('/books?q=Кобзар')
+        ->assertOk()
+        ->assertSee('data-filter="q"', false)
+        ->assertSee(__('ui.catalog.search_chip', ['term' => 'Кобзар']));
+});
+
 test('in_stock filter requires quantity above reserved in some warehouse', function () {
     $warehouse = Warehouse::factory()->create();
     $available = Book::factory()->create(['title' => 'Available']);

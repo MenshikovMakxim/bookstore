@@ -32,6 +32,7 @@ class BookController extends Controller
         $format = isset($filters['format']) ? BookFormat::from($filters['format']) : null;
         $tag = isset($filters['tag']) ? Tag::firstWhere('slug', $filters['tag']) : null;
         $inStock = filter_var($filters['in_stock'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $search = trim($filters['q'] ?? '');
         $sort = $filters['sort'] ?? 'newest';
 
         // Conditional query building with when() + local scopes (Book model): each
@@ -42,6 +43,7 @@ class BookController extends Controller
             ->when($author, fn ($query, Author $author) => $query->byAuthor($author))
             ->when($format, fn ($query, BookFormat $format) => $query->where('format', $format))
             ->when($tag, fn ($query, Tag $tag) => $query->tagged($tag))
+            ->when($search !== '', fn ($query) => $query->search($search))
             ->when($inStock, fn ($query) => $query->inStock())
             ->sorted($sort)
             ->orderBy('id')
@@ -56,6 +58,7 @@ class BookController extends Controller
                 'format' => $format?->label(),
                 'in_stock' => $inStock ? __('ui.catalog.chip_in_stock') : null,
                 'tag' => $tag ? '#'.$tag->name : null,
+                'q' => $search !== '' ? __('ui.catalog.search_chip', ['term' => $search]) : null,
             ]),
             'activeGenre' => $genre,
             'sort' => $sort,

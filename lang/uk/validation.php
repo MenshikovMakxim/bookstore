@@ -167,6 +167,7 @@ return [
     'isbn13_checksum' => 'Поле :attribute містить ISBN із хибною контрольною цифрою.',
     'no_links' => 'Поле :attribute не може містити посилань.',
     'reserved_exceeds_quantity' => 'Резерв не може перевищувати кількість.',
+    'receipt_on_decrease' => 'Надходження (receipt) не можна вибрати, якщо кількість зменшується.',
     // bookstore: per-attribute messages ("attribute.rule")
     'custom' => [
         'shelf_code' => [

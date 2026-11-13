@@ -33,7 +33,7 @@ class PendingReviewNotification extends Notification implements ShouldQueue
     {
         $this->bookTitle = $review->book->title;
         $this->reviewer = $review->user->name;
-        $this->rating = $review->rating;
+        $this->rating = $review->rating->value;
         $this->excerpt = Str::limit($review->body, 200);
     }
 

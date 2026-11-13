@@ -65,6 +65,18 @@ class UpdateStockRequest extends FormRequest
                 if ((int) $this->input('reserved') > (int) $this->input('quantity')) {
                     $validator->errors()->add('reserved', __('validation.reserved_exceeds_quantity'));
                 }
+
+                // A receipt means copies arrived; it cannot explain a write-off.
+                $reasonInput = $this->input('reason');
+                $reason = $reasonInput instanceof StockMovementReason
+                    ? $reasonInput
+                    : (is_string($reasonInput) ? StockMovementReason::tryFrom($reasonInput) : null);
+
+                if ($reason === StockMovementReason::Receipt
+                    && (int) $this->input('quantity') < $this->stock()->quantity
+                    && ! $validator->errors()->has('reason')) {
+                    $validator->errors()->add('reason', __('validation.receipt_on_decrease'));
+                }
             },
         ];
     }

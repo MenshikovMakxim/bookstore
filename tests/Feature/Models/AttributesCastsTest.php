@@ -5,8 +5,10 @@ use App\Lab\Models\LabUser;
 use App\Models\Author;
 use App\Models\Book;
 use App\Models\Profile;
+use App\Models\Review;
 use App\Models\User;
 use App\ValueObjects\Money;
+use App\ValueObjects\Rating;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Casts\ArrayObject;
 use Illuminate\Database\Eloquent\MassAssignmentException;
@@ -23,6 +25,17 @@ test('price is cast to Money and stored as integer kopecks', function () {
 
     $book->update(['price' => 1000]); // plain int = kopecks
     expect($book->fresh()->price->cents)->toBe(1000);
+});
+
+test('review rating is a Rating value object; the database keeps the raw integer', function () {
+    // HTTP form values arrive as strings; the cast accepts them and validates the range.
+    $review = Review::factory()->create(['rating' => '4']);
+
+    expect($review->rating)->toBeInstanceOf(Rating::class)
+        ->and($review->rating->value)->toBe(4)
+        ->and($review->rating->stars())->toBe('★★★★☆')
+        ->and($review->toArray()['rating'])->toBe(['value' => 4, 'stars' => '★★★★☆'])
+        ->and(DB::table('reviews')->where('id', $review->id)->value('rating'))->toBe(4);
 });
 
 test('a float price is rejected with a clear message', function () {

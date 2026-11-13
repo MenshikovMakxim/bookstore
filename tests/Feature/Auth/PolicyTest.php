@@ -105,6 +105,12 @@ test('view-reports gate: managers and admins', function () {
         ->and(Gate::forUser($this->reader)->allows('view-reports'))->toBeFalse();
 });
 
+test('export-csv gate: admins only', function () {
+    expect(Gate::forUser($this->manager)->allows('export-csv'))->toBeFalse()
+        ->and(Gate::forUser($this->reader)->allows('export-csv'))->toBeFalse()
+        ->and(Gate::forUser($this->admin)->allows('export-csv'))->toBeTrue();
+});
+
 test('Gate::before lets the admin through abilities the policy itself denies', function () {
     $foreign = Review::factory()->approved()->create();
 

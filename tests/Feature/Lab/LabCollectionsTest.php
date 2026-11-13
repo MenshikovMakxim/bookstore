@@ -1,6 +1,7 @@
 <?php
 
 use App\Lab\CollectionExamples;
+use App\Lab\QueryProfiler;
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Profile;
@@ -8,6 +9,7 @@ use App\Models\Review;
 use App\Models\Scopes\ApprovedScope;
 use App\Models\Warehouse;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The lab's per-model approaches are deliberate N+1s over fixed samples (20 / 200
@@ -59,6 +61,70 @@ test('chunk() skips rows when the callback changes the filtered column; chunkByI
         ->and($chunkById['profile']->result['unapproved_after'])->toBe(0)
         // Both ran inside rolled-back transactions.
         ->and($pending())->toBe($unapproved);
+});
+
+test('lazyById(1000) eager loads the genre per chunk; cursor() cannot and runs N+1', function () {
+    $genre = Genre::factory()->create();
+    Book::factory()->count(10)->for($genre)->create();
+
+    $lazy = QueryProfiler::run(function () {
+        $names = [];
+        Book::with('genre')->lazyById(1000)->each(function (Book $book) use (&$names) {
+            $names[] = $book->genre->name;
+        });
+
+        return count($names);
+    });
+
+    // No LazyLoading::allowDuring(): cursor() hydrates one model at a time, so strict
+    // mode does not flag the N+1 that happens here.
+    $cursor = QueryProfiler::run(function () {
+        $names = [];
+        foreach (Book::cursor() as $book) {
+            $names[] = $book->genre->name;
+        }
+
+        return count($names);
+    });
+
+    expect($lazy->result)->toBe(10)
+        ->and($lazy->queries)->toBe(2) // one book query + one eager load for the genre
+        ->and($cursor->result)->toBe(10)
+        ->and($cursor->error)->toBeNull()
+        ->and($cursor->queries)->toBe(11); // one book query + one genre query per book
+});
+
+test('lazy()->each() skips rows too when the callback changes the filtered column', function () {
+    Review::factory()->count(5)->create(['is_approved' => false]);
+    $pending = fn () => Review::withoutGlobalScope(ApprovedScope::class)->where('is_approved', false)->count();
+
+    DB::beginTransaction();
+    try {
+        $processed = 0;
+        Review::withoutGlobalScope(ApprovedScope::class)->where('is_approved', false)
+            ->lazy(2)->each(function (Review $review) use (&$processed) {
+                $review->update(['is_approved' => true]);
+                $processed++;
+            });
+
+        expect($processed)->toBe(3)->and($pending())->toBe(2);
+    } finally {
+        DB::rollBack();
+    }
+
+    DB::beginTransaction();
+    try {
+        $processed = 0;
+        Review::withoutGlobalScope(ApprovedScope::class)->where('is_approved', false)
+            ->lazyById(2)->each(function (Review $review) use (&$processed) {
+                $review->update(['is_approved' => true]);
+                $processed++;
+            });
+
+        expect($processed)->toBe(5)->and($pending())->toBe(0);
+    } finally {
+        DB::rollBack();
+    }
 });
 
 test('toQuery()->update() only touches the models in the collection', function () {

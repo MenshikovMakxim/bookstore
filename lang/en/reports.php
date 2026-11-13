@@ -15,6 +15,10 @@ return [
         'reserved' => 'reserved',
         'value' => 'stock value',
         'empty' => 'No stock.',
+        'filtered' => 'Showing only warehouse: :warehouse',
+        'all' => 'All warehouses',
+        'only' => 'Only this warehouse',
+        'warehouse_csv' => 'CSV for this warehouse ↓',
         'columns' => [
             'genre' => 'Root genre',
             'titles' => 'Titles',

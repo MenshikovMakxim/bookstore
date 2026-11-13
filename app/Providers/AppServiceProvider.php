@@ -136,8 +136,10 @@ class AppServiceProvider extends ServiceProvider
             return true;
         });
 
-        // A gate: an ability that is not about one model (policies are per model).
+        // Gates: abilities that are not about one model (policies are per model).
         Gate::define('view-reports', fn (User $user) => in_array($user->role, [UserRole::Manager, UserRole::Admin], true));
+        // CSV is a raw data export; managers see the HTML report, only admins export it.
+        Gate::define('export-csv', fn (User $user) => $user->role === UserRole::Admin);
 
         // Policies (App\Policies\{Model}Policy) are found by auto-discovery.
     }

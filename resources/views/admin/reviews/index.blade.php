@@ -10,7 +10,7 @@
                             <a href="{{ route('admin.books.show', $review->book) }}" class="text-amber-800 hover:underline">{{ $review->book->title }}</a>
                         @endif
                     </span>
-                    <x-rating-stars :rating="$review->rating" />
+                    <x-rating-stars :rating="$review->rating->value" />
                 </div>
                 <p class="mt-2 text-sm text-stone-700">{{ $review->body }}</p>
                 <x-slot:footer class="flex items-center justify-between">

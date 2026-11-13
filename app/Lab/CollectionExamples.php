@@ -394,7 +394,7 @@ final class CollectionExamples
                 self::approach('reviews->where()->count()', function () {
                     $book = Book::find($this->busiestBookId)->load('reviews');
 
-                    return $book->reviews->where('rating', 5)->count();
+                    return $book->reviews->where('rating.value', 5)->count();
                 }),
             ]);
 
@@ -424,7 +424,7 @@ final class CollectionExamples
                 self::approach('reviews->where()->first()', function () {
                     $book = Book::find($this->busiestBookId)->load('reviews');
 
-                    return $book->reviews->where('rating', 5)->first()?->only(['id', 'rating']);
+                    return $book->reviews->where('rating.value', 5)->first()?->only(['id', 'rating']);
                 }),
             ]);
     }

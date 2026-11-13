@@ -20,7 +20,7 @@
         @if ($myReview)
             <x-card data-my-review>
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                    <x-rating-stars :rating="$myReview->rating" />
+                    <x-rating-stars :rating="$myReview->rating->value" />
                     <span @class([
                         'rounded px-2 py-0.5 text-xs',
                         'bg-amber-100 text-amber-800' => ! $myReview->is_approved,
@@ -39,7 +39,7 @@
                         <form method="POST" action="{{ route('reviews.update', $myReview) }}" class="mt-3 space-y-3">
                             @csrf
                             @method('PUT')
-                            <x-form.radio-rating name="rating" :label="__('ui.reviews.rating')" :value="$myReview->rating" bag="reviewEdit" />
+                            <x-form.radio-rating name="rating" :label="__('ui.reviews.rating')" :value="$myReview->rating->value" bag="reviewEdit" />
                             <x-form.textarea name="body" :label="__('ui.reviews.body')" :value="$myReview->body" bag="reviewEdit" rows="5"
                                              :minlength="App\Http\Requests\StoreReviewRequest::BODY_MIN" :maxlength="App\Http\Requests\StoreReviewRequest::BODY_MAX" />
                             <button type="submit" class="btn">{{ __('ui.manage.save') }}</button>

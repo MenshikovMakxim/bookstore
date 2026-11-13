@@ -102,6 +102,10 @@ class ReviewController extends Controller implements HasMiddleware
 Правило «менеджер — лише свій склад» записане в обох місцях: middleware закриває піддерево URL
 одним рядком, політика відповідає на `@can('update', $stock)` у списку й на `can:update,stock`.
 
+Редагування залишку має ще одне правило стану: `UpdateStockRequest::after()` забороняє причину
+`receipt`, якщо кількість зменшується. Зміна лише `shelf_code` не потребує причини й не створює
+руху; `StockObserver` реагує тільки на зміну `quantity`.
+
 ### Скоуповані прив’язки як захист від IDOR
 
 ```php
@@ -119,7 +123,8 @@ Route::prefix('/warehouses/{warehouse}')->middleware('warehouse.access')->group(
 ### Гейти проти політик; пастки `Gate::before`
 
 - **Гейт** — правило без моделі: `Gate::define('view-reports', …)` (менеджер або адмін) → маршрути
-  `can:view-reports` і `@can('view-reports')` у меню.
+  `can:view-reports` і `@can('view-reports')` у меню. `export-csv` — окремий гейт лише для адміна:
+  HTML-звіт доступний менеджеру, а сирий CSV — ні; посилання сховані через `@can('export-csv')`.
 - **Політика** — правила однієї моделі, знаходяться автоматично (`Book` → `App\Policies\BookPolicy`).
   Кожен метод сам перевіряє роль адміна — політика читається й тестується окремо.
 - **`Gate::before`**: адмін → `true`, інакше `null` («вирішуй далі»). **Ніколи `false`**: це відібрало б

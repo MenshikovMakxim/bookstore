@@ -59,7 +59,7 @@ test('a verified reader writes one review; it is pending and is_approved cannot 
     $review = anyReview()->sole();
     expect($review->user_id)->toBe($user->id)
         ->and($review->is_approved)->toBeFalse()
-        ->and($review->rating)->toBe(4);
+        ->and($review->rating->value)->toBe(4);
 
     // Second attempt: ReviewPolicy::create says no => 403 from StoreReviewRequest::authorize().
     $this->post(route('books.reviews.store', $this->book), reviewPayload())->assertForbidden();
@@ -117,10 +117,14 @@ test('the author edits a pending review; a partial update keeps the other field 
     $this->put(route('reviews.update', $review), reviewPayload(['rating' => 5, 'body' => 'Перечитав і змінив думку: дуже добре.']))
         ->assertRedirect(route('books.show', $this->book).'#review-form')
         ->assertSessionHas('status');
-    expect($review->fresh()->only(['rating', 'body']))->toBe(['rating' => 5, 'body' => 'Перечитав і змінив думку: дуже добре.']);
+    expect($review->fresh())
+        ->rating->value->toBe(5)
+        ->body->toBe('Перечитав і змінив думку: дуже добре.');
 
     $this->put(route('reviews.update', $review), ['rating' => 3])->assertSessionHasNoErrors();
-    expect($review->fresh()->only(['rating', 'body']))->toBe(['rating' => 3, 'body' => 'Перечитав і змінив думку: дуже добре.']);
+    expect($review->fresh())
+        ->rating->value->toBe(3)
+        ->body->toBe('Перечитав і змінив думку: дуже добре.');
 });
 
 test('edit errors go to the named bag "reviewEdit", with old input', function () {

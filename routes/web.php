@@ -139,8 +139,11 @@ Route::prefix('notifications')->name('notifications.')->middleware(['auth', 'ver
 // A gate (view-reports) rather than role:manager,admin: the rule lives in one place
 // and the same check drives the navigation link (@can('view-reports')).
 Route::prefix('reports')->name('reports.')->middleware(['auth', 'verified', 'can:view-reports'])->group(function () {
-    Route::get('/stock', ReportController::class)->defaults('report', 'stock')->name('stock');
-    Route::get('/stock.csv', ReportController::class)->defaults('report', 'stock-csv')->name('stock-csv');
+    // Literal .csv route first: /stock/{warehouse?} must not swallow /stock.csv.
+    // {warehouse?} is an optional route-model binding => /reports/stock/5 or /stock.csv/5.
+    // Raw export is admin-only: can:export-csv (Gate) narrows the group's view-reports.
+    Route::get('/stock.csv/{warehouse?}', ReportController::class)->defaults('report', 'stock-csv')->middleware('can:export-csv')->name('stock-csv');
+    Route::get('/stock/{warehouse?}', ReportController::class)->defaults('report', 'stock')->name('stock');
     Route::get('/top-authors', ReportController::class)->defaults('report', 'top-authors')->name('top-authors');
 });
 
